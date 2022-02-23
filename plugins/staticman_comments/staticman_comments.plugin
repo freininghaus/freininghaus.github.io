@@ -1,0 +1,13 @@
+[Core]
+Name = staticman_comments
+Module = staticman_comments
+
+[Nikola]
+MinVersion = 8.1.4+
+PluginCategory = SignalHandler
+
+[Documentation]
+Author = Frank Reininghaus
+Version = 0.1
+Website = None
+Description = Use Staticman (https://staticman.net/) as a comment system

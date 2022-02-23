@@ -1,0 +1,113 @@
+<%def name="comment_form(url, title, identifier)">
+%if comment_system_id:
+<div id="comment-section"></div>
+<%
+import nikola.utils
+post_slug = nikola.utils.slugify(title)
+%>
+% for s in post.comments:
+<div class="card mt-2 ml-${s.nesting_level() * 5}" id="${s.id}">
+  <h5 class="card-header">
+%if s.url:
+  <a href="${s.url}">${s.author | h}</a>
+%else:
+  ${s.author | h}
+%endif
+  –
+  <a href="#${s.id}" title="Permalink to this comment">${s.date.strftime("%B %-d, %Y %H:%M")}</a></h5>
+  <div class="card-body">
+    ${s.html}
+%if False:  # TODO: allow replies
+    <a class="card-link">Reply to this comment</a>
+%endif
+  </div>
+</div>
+% endfor
+
+<div id="respond">
+<form id="comment-form" method="post" class="" action="${comment_system_id}">
+
+<fieldset id="comments-fieldset">
+
+  <input type="hidden" name="options[origin]" value="${post.source_path}"/>
+  <input type="hidden" id="comment-replying-to-uid" name="fields[replying-to-id]" value=""/>
+  <input type="hidden" name="options[title]" value="${title}"/>
+
+  <div class="form-group mt-4">
+    <label for="comment-form-message"><h3>Add Comment</h3></label>
+    <textarea class="form-control" name="fields[message]" type="text" id="comment-form-message" placeholder="Your comment (markdown accepted)" required rows="6"></textarea>
+  </div>
+
+  <div class="form-group">
+    <label for="comment-form-name">Name</label>
+    <input class="form-control" name="fields[author]" type="text" id="comment-form-name" placeholder="Your name (required)" required/>
+  </div>
+
+  <div class="form-group">
+    <label for="comment-form-email">E-mail</label>
+    <input class="form-control" name="fields[email]" type="email" id="comment-form-email" placeholder="Your email (optional)"/>
+  </div>
+
+  <div class="form-group">
+    <label for="comment-form-email">Website</label>
+    <input class="form-control" name="fields[url]" type="url" id="comment-form-url" placeholder="Link to your website (optional)"/>
+  </div>
+
+  <div class="form-group" style="display:none;">
+    <label for="hp">Hp</label>
+    <input class="form-control" name="fields[hp]" id="hp" type="text" placeholder="Leave blank">
+  </div>
+
+%if False:  # TODO: allow replies
+  <button class="btn btn-secondary" id="cancel-comment-reply-link">
+    Cancel Reply
+  </button>
+%endif
+
+  <button class="btn btn-primary" id="comment-form-submit">
+    Submit comment
+  </button>
+
+</fieldset>
+</form>
+</div>
+
+<div class="modal" id="comments-modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="comments-modal-title"></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="comments-modal-text"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- script for moving the comment form next to a comment for replies -->
+<script src="/assets/js/staticman_comments.js"/>
+
+<!-- icon for the button while comment submission is in progress -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none" >
+  <symbol id="icon-loading" viewBox="149.8 37.8 499.818 525"><path d="M557.8 187.8c13.8 0 24.601-10.8 24.601-24.6S571.6 138.6 557.8 138.6s-24.6 10.8-24.6 24.6c0 13.2 10.8 24.6 24.6 24.6zm61.2 90.6c-16.8 0-30.6 13.8-30.6 30.6s13.8 30.6 30.6 30.6 30.6-13.8 30.6-30.6c.6-16.8-13.2-30.6-30.6-30.6zm-61.2 145.2c-20.399 0-36.6 16.2-36.6 36.601 0 20.399 16.2 36.6 36.6 36.6 20.4 0 36.601-16.2 36.601-36.6C595 439.8 578.2 423.6 557.8 423.6zM409 476.4c-24 0-43.2 19.199-43.2 43.199s19.2 43.2 43.2 43.2 43.2-19.2 43.2-43.2S433 476.4 409 476.4zM260.8 411c-27 0-49.2 22.2-49.2 49.2s22.2 49.2 49.2 49.2 49.2-22.2 49.2-49.2-22.2-49.2-49.2-49.2zm-10.2-102c0-27.6-22.8-50.4-50.4-50.4-27.6 0-50.4 22.8-50.4 50.4 0 27.6 22.8 50.4 50.4 50.4 27.6 0 50.4-22.2 50.4-50.4zm10.2-199.8c-30 0-54 24-54 54s24 54 54 54 54-24 54-54-24.6-54-54-54zM409 37.8c-35.4 0-63.6 28.8-63.6 63.6S374.2 165 409 165s63.6-28.8 63.6-63.6-28.2-63.6-63.6-63.6z"/>
+  </symbol>
+</svg>
+
+%endif
+</%def>
+
+<%def name="comment_link(link, identifier)">
+%if comment_system_id:
+<a href="${link}#comment-section">${messages("Comments")}</a>
+%endif
+</%def>
+
+<%def name="comment_link_script()">
+</%def>
