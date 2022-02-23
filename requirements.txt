@@ -1,0 +1,2 @@
+nikola[extras]==8.2.0
+pymd4c==1.1.2
