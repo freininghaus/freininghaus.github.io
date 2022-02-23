@@ -1,0 +1,50 @@
+div.prompt {
+  /* hide Jupyter prompts line In [1] */
+  display: none;
+}
+
+div.output_subarea {
+  /* make Jupyter output area wider (ipython.min.css reduces the width) */
+  max-width: 100% !important;
+}
+
+div.output_area pre {
+  /* keep original font size (nikola_ipython.css reduces it to 13px) */
+  font-size: inherit !important;
+
+  /* ipython.min.css makes the background transparent, but separating the cell output from the rest is better IMHO */
+  background: #f8f8f8 !important;
+
+  /* use same padding for cell input and output */
+  padding: .4em !important;
+}
+
+div.input_area {
+  /* use border for cell input, just like for regular code blocks */
+  border: 1px solid #ccc;
+}
+
+.rendered_html pre, .rendered_html code {
+  /* overwrite background color from nikola_ipython.css */
+  background-color: #fff !important;
+}
+
+blockquote p {
+  /* For some reason, Nikola's Bootstrap theme makes the quoted text larger, see
+  https://github.com/getnikola/nikola/commit/5ef28cb78f7a56c2da282946268de6a2e295410d
+  */
+  font-size: 1rem;
+
+  /* Moreover, an indicator on the left is nice */
+  padding-left: 2ex;
+  border-left: 2px solid #ccc;
+}
+
+blockquote {
+  /* The margin is too big */
+  margin: 0;
+}
+
+section.comments h2 {
+  margin-top: 2rem;
+}
