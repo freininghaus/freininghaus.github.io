@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting rid of waste: manipulating calendars with Python and the ics library | Frank Reininghaus</title>
+<link href="../../../../../assets/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/baguetteBox.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/rst.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/code.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/theme.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/custom.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/ipython.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/nikola_ipython.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../../../../rss.xml">
+<link rel="canonical" href="https://freininghaus.github.io/blog/2022/03/01/getting-rid-of-waste-manipulating-calendars-with-python-and-ics/">
+<!--[if lt IE 9]><script src="../../../../../../../../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Frank Reininghaus">
+<link rel="prev" href="../new-blog/" title="New blog" type="text/html">
+<meta property="og:site_name" content="Frank Reininghaus">
+<meta property="og:title" content="Getting rid of waste: manipulating calendars with Python and the ics l">
+<meta property="og:url" content="https://freininghaus.github.io/blog/2022/03/01/getting-rid-of-waste-manipulating-calendars-with-python-and-ics/">
+<meta property="og:description" content='In the city where I live, four different kinds of waste are collected regularly:
+
+paper, 
+organic waste,
+the "yellow bag" which is for all sorts of packaging, and
+residual waste, which contains all th'>
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2022-03-01T22:24:59+01:00">
+<meta property="article:tag" content="python">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../../../../">
+
+            <span id="blog-title">Frank Reininghaus</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../../../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../../../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../../../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+<a href="../../../../../pages/about/" class="nav-link">About</a>
+
+                
+                
+                    
+    
+    </li>
+<li class="nav-item">
+    <a href="index.ipynb" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+        
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Getting rid of waste: manipulating calendars with Python and the ics library</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Frank Reininghaus
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2022-03-01T22:24:59+01:00" itemprop="datePublished" title="2022-03-01">2022-03-01</time></a>
+            </p>
+                <p class="commentline">
+    
+<a href="#comment-section">Comments</a>
+
+
+            
+        </p>
+<p class="sourceline"><a href="index.ipynb" class="sourcelink">Source</a></p>
+
+        </div>
+        
+
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>In the city where I live, four different kinds of waste are collected regularly:</p>
+<ul>
+<li>paper, </li>
+<li>organic waste,</li>
+<li>the "yellow bag" which is for all sorts of packaging, and</li>
+<li>residual waste, which contains all the rest (except batteries, dangerous chemicals and a couple of other things, which people have to bring to collection facilities themselves).</li>
+</ul>
+<p>At first sight, the days on which I have to take out the different bins and bags seem easy enough to remember: usually, everything is collected on the same day of the week. However, there are different schedules for the different kinds of waste (biweekly or every four weeks in my part of the city). Moreover, in weeks with bank holidays, the collection is often shifted to another weekday.</p>
+<p>Fortunately, the city council provides <a href="https://en.wikipedia.org/wiki/ICalendar">iCalendar</a> files (<code>*.ical</code>) with all waste collection dates for the current year <a href="https://serviceportal.aachen.de/abfallnavi">at its website</a>. The downloaded file can easily be imported into any calendar application. I found that the structure of the events in the file could be made more convenient though.</p>
+<!-- TEASER_END -->
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Structure-of-iCalendar-files">Structure of iCalendar files<a class="anchor-link" href="#Structure-of-iCalendar-files">¶</a>
+</h2>
+<p>Some readers might not be familiar with the iCalendar file format, so let's first have a quick look at the downloaded file.</p>
+<p>It turns out that the file contains plain text. The meaning of most lines is evident, and lines are grouped into events and other kinds of components with lines like <code>BEGIN:VEVENT</code> and <code>END:VEVENT</code>. I will show you the file up to the end of the first event below.</p>
+<p>Note:</p>
+<ol>
+<li>The <a href="index.ipynb">source of this post</a> is a <a href="https://jupyter.org/">Jupyter</a> notebook, which you can download, modify, and run with an iCalendar file yourself.</li>
+<li>I am using <code>sed</code> to show just the first calendar event on my Linux command line. Working with the events on the calendar with Python should work the same on every operating system though. You do not need <code>sed</code> nor any other special tools.</li>
+<li>The exclamation mark in <code>!sed</code> tells the Jupyter kernel to execute this command in the shell, and not in the Python interpreter.</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [1]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>sed -e <span class="s1">'/END:VEVENT/q'</span> -e <span class="s1">'s/^\(LOCATION:\).*$/\1&lt;my address&gt;/'</span> calendar.ics
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:regio iT
+BEGIN:VEVENT
+UID:6d52ed35-9b04-41bc-9e4b-a6c07d845699
+DTSTAMP:20220107T185517Z
+SUMMARY;LANGUAGE=de:Bio 2wö
+DTSTART:20220106T050000Z
+DTEND:20220106T050000Z
+DESCRIPTION:Bio 2wö
+LOCATION:&lt;my address&gt;
+BEGIN:VALARM
+ACTION:DISPLAY
+TRIGGER;RELATED=START:-PT720M
+DESCRIPTION:Bio 2wö
+END:VALARM
+END:VEVENT
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>In principle, we could write a script that loads and parses the lines, groups them into events, and works with these. But we do not have to reinvent the wheel - there are libraries for this purpose, of course 😉</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Loading-the-iCalendar-file-with-Python">Loading the iCalendar file with Python<a class="anchor-link" href="#Loading-the-iCalendar-file-with-Python">¶</a>
+</h2>
+<p>I looked for Python libraries which can read and write iCalendar files and found that <a href="https://pypi.org/project/ics/">ics</a> is easy to work with and more than powerful enough for my needs.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [2]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">ics</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Let's open the file and look at the first events in the calendar:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"calendar.ics"</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+    <span class="n">calendar</span> <span class="o">=</span> <span class="n">ics</span><span class="o">.</span><span class="n">Calendar</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+
+<span class="nb">sorted</span><span class="p">(</span><span class="n">calendar</span><span class="o">.</span><span class="n">events</span><span class="p">)[:</span><span class="mi">10</span><span class="p">]</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[3]:</div>
+
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>[&lt;Event 'Gelber Sack' begin:2022-01-06T05:00:00+00:00 end:2022-01-06T05:00:00+00:00&gt;,
+ &lt;Event 'Restabfall 2wö' begin:2022-01-06T05:00:00+00:00 end:2022-01-06T05:00:00+00:00&gt;,
+ &lt;Event 'Bio 2wö' begin:2022-01-06T05:00:00+00:00 end:2022-01-06T05:00:00+00:00&gt;,
+ &lt;Event 'Restabfall 2wö' begin:2022-01-20T05:00:00+00:00 end:2022-01-20T05:00:00+00:00&gt;,
+ &lt;Event 'Altpapier 4wö' begin:2022-01-20T05:00:00+00:00 end:2022-01-20T05:00:00+00:00&gt;,
+ &lt;Event 'Bio 2wö' begin:2022-01-20T05:00:00+00:00 end:2022-01-20T05:00:00+00:00&gt;,
+ &lt;Event 'Gelber Sack' begin:2022-01-20T05:00:00+00:00 end:2022-01-20T05:00:00+00:00&gt;,
+ &lt;Event 'Restabfall 2wö' begin:2022-02-03T05:00:00+00:00 end:2022-02-03T05:00:00+00:00&gt;,
+ &lt;Event 'Gelber Sack' begin:2022-02-03T05:00:00+00:00 end:2022-02-03T05:00:00+00:00&gt;,
+ &lt;Event 'Bio 2wö' begin:2022-02-03T05:00:00+00:00 end:2022-02-03T05:00:00+00:00&gt;]</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>The structure becomes more obvious if we print the date first in each line and add some grouping:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [4]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="n">grouped_by_date</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">calendar</span><span class="o">.</span><span class="n">events</span><span class="p">),</span>
+                                    <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">event</span><span class="p">:</span> <span class="n">event</span><span class="o">.</span><span class="n">begin</span><span class="p">)</span>
+
+<span class="n">first_groups</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">grouped_by_date</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">events</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">first_groups</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">begin</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span> <span class="n">event</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2022-01-06 Gelber Sack
+2022-01-06 Restabfall 2wö
+2022-01-06 Bio 2wö
+
+2022-01-20 Restabfall 2wö
+2022-01-20 Altpapier 4wö
+2022-01-20 Bio 2wö
+2022-01-20 Gelber Sack
+
+2022-02-03 Restabfall 2wö
+2022-02-03 Gelber Sack
+2022-02-03 Bio 2wö
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>As you can see, three different kinds of waste are collected on some dates, and four on others (note that the suffix "2wö" is a shorthand for "2-wöchentlich", or biweekly, and "4wö" means "every four weeks"). I did not like these showing up as different events in my calendar. This makes the calendar more cluttered than it needs to be, especially on days with a number of other events.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Merging-events">Merging events<a class="anchor-link" href="#Merging-events">¶</a>
+</h2>
+<p>To fix this, we merge simultaneous events into one. The name of the merged event should contain all kinds of waste that are collected on that day.</p>
+<p>First, let's strip the name suffix that indicates the schedule.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [5]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">re</span>
+
+<span class="k">def</span> <span class="nf">strip_suffix</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">match</span> <span class="o">:=</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="s2">"^(.*)( \d*wö)$"</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">name</span>
+
+<span class="k">assert</span> <span class="n">strip_suffix</span><span class="p">(</span><span class="s2">"Gelber Sack"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"Gelber Sack"</span>
+<span class="k">assert</span> <span class="n">strip_suffix</span><span class="p">(</span><span class="s2">"Altpapier 4wö"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"Altpapier"</span>
+<span class="k">assert</span> <span class="n">strip_suffix</span><span class="p">(</span><span class="s2">"Bio 2wö"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"Bio"</span>
+<span class="k">assert</span> <span class="n">strip_suffix</span><span class="p">(</span><span class="s2">"Restabfall 2wö"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"Restabfall"</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We can then write a generator that finds all simultaneous events and yields a merged event:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [6]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">merge_names</span><span class="p">(</span><span class="n">events</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">strip_suffix</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">merge_simultaneous_events</span><span class="p">(</span><span class="n">events</span><span class="p">):</span>
+    <span class="n">begin_and_end</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">event</span><span class="p">:</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">begin</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">end</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">events</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">calendar</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> 
+                                              <span class="n">key</span><span class="o">=</span><span class="n">begin_and_end</span><span class="p">),</span> 
+                                       <span class="n">key</span><span class="o">=</span><span class="n">begin_and_end</span><span class="p">):</span>
+        <span class="c1"># We can consume 'events' only once, but we need it twice.</span>
+        <span class="c1"># Therefore, we put them into a tuple.</span>
+        <span class="n">events</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">events</span><span class="p">)</span>
+
+        <span class="n">new_name</span> <span class="o">=</span> <span class="n">merge_names</span><span class="p">(</span><span class="n">events</span><span class="p">)</span>
+        
+        <span class="n">merged_event</span> <span class="o">=</span> <span class="n">events</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">merged_event</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">new_name</span>
+        <span class="n">merged_event</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">new_name</span>
+
+        <span class="k">yield</span> <span class="n">merged_event</span>
+
+<span class="n">merged_events</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">merge_simultaneous_events</span><span class="p">(</span><span class="n">events</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now all collections on the same day are merged nicely:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [7]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">merged_events</span><span class="p">[:</span><span class="mi">4</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">begin</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span> <span class="n">event</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2022-01-06 Bio, Gelber Sack, Restabfall
+2022-01-20 Altpapier, Bio, Gelber Sack, Restabfall
+2022-02-03 Bio, Gelber Sack, Restabfall
+2022-02-17 Altpapier, Bio, Gelber Sack, Restabfall
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Are we done yet, or is there more that could be improved?</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Fixing-start-and-end-times">Fixing start and end times<a class="anchor-link" href="#Fixing-start-and-end-times">¶</a>
+</h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Let's look at the times of events close to the daylight saving time switch:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [8]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">print_events_in_months</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> <span class="n">months</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">)):</span>
+    <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">dt</span> <span class="o">:=</span> <span class="n">event</span><span class="o">.</span><span class="n">begin</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span><span class="o">.</span><span class="n">month</span> <span class="ow">in</span> <span class="n">months</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+                  <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+                  <span class="n">event</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+<span class="n">print_events_in_months</span><span class="p">(</span><span class="n">merged_events</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2022-03-04 05:00:00 Bio, Gelber Sack, Restabfall
+2022-03-17 05:00:00 Altpapier, Bio, Gelber Sack, Restabfall
+2022-03-31 04:00:00 Bio, Gelber Sack, Restabfall
+2022-04-13 04:00:00 Altpapier, Bio, Gelber Sack, Restabfall
+2022-04-28 04:00:00 Bio, Gelber Sack, Restabfall
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>All events have the same start time in UTC, but it would be nice if they had the same start time in local time! Maybe 7 am, because the first waste collections occur around that time.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [9]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">pytz</span>
+
+<span class="n">berlin</span> <span class="o">=</span> <span class="n">pytz</span><span class="o">.</span><span class="n">timezone</span><span class="p">(</span><span class="s2">"Europe/Berlin"</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">set_time_7am</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">date</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">begin</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="n">hour</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+
+    <span class="n">new_dt</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">berlin</span><span class="p">)</span>
+    
+    <span class="n">event</span><span class="o">.</span><span class="n">end</span> <span class="o">=</span> <span class="n">new_dt</span>
+    <span class="n">event</span><span class="o">.</span><span class="n">begin</span> <span class="o">=</span> <span class="n">new_dt</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Note that we modify <code>event.end</code> before <code>event.begin</code>. Otherwise, <code>ics</code> would complain because the new <code>begin</code> date is after the old one, such that <code>begin</code> would be after <code>end</code> temporarily. This issue could be fixed better, but simply swapping the assignments works just fine for my simple task.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Creating-a-new-file-with-the-merged-events">Creating a new file with the merged events<a class="anchor-link" href="#Creating-a-new-file-with-the-merged-events">¶</a>
+</h2>
+<p>Now we can put the new events into a new Calendar:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [10]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">new_calendar</span> <span class="o">=</span> <span class="n">ics</span><span class="o">.</span><span class="n">Calendar</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">merged_events</span><span class="p">:</span>
+    <span class="n">set_time_7am</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="n">new_calendar</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>It can be serialized easily to a file because a <code>Calendar</code> object will happily behave like an iterable of strings that produces the file contents line by line:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [11]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"new-calendar.ics"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">new_calendar</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We can check now that the first event in the new file looks as it should. Actually, the first event in the file is not the event that occurs first because the events are stored in a <code>set</code> in <code>Calendar</code>. Unlike <code>dict</code>, a Python <code>set</code> does not preserve the insertion order.</p>
+<p>Note that I run <code>dos2unix</code> on the file before processing it further because the Windows line breaks (<code>"\r\n"</code>) created by <code>ics</code> appear to be turned into <code>"\r\n\r"</code> in the cell output. This is not visible in Jupyter, but it confuses the code which converts the Notebook file into a blog post. I couldn't investigate yet what the root cause of this problem is, so I just remove the Windows line breaks.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [12]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>dos2unix new-calendar.ics <span class="m">2</span>&gt;/dev/null <span class="o">||</span> <span class="nb">echo</span> <span class="s2">"dos2unix failed!"</span>
+
+<span class="o">!</span>sed -e <span class="s1">'/END:VEVENT/q'</span> -e <span class="s1">'s/^\(LOCATION:\).*$/\1&lt;my address&gt;/'</span> new-calendar.ics
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:ics.py - http://git.io/lLljaA
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Restabfall 2wö
+TRIGGER:-PT12H
+END:VALARM
+DTSTAMP:20220107T185517Z
+DESCRIPTION:Altpapier\, Bio\, Gelber Sack\, Restabfall
+DTEND:20220804T050000Z
+LOCATION:&lt;my address&gt;
+DTSTART:20220804T050000Z
+SUMMARY:Altpapier\, Bio\, Gelber Sack\, Restabfall
+UID:7993aafc-a134-48ea-b391-615b5ec63720
+END:VEVENT
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>You might notice that value of the <code>DESCRIPTION</code> field of the alarm is still the one from one of the original events. This is also straightforward to fix, but I think that this post is already long enough as it is 🙂</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Conclusion">Conclusion<a class="anchor-link" href="#Conclusion">¶</a>
+</h2>
+<p>Perhaps surprisingly, taking out the waste can teach you things about programming.</p>
+<p>If you ever want to perform changes on iCalendar files and enjoy coding in Python as much as I do, I recommend that you give <a href="https://pypi.org/project/ics/">ics</a> a try. It's just a</p>
+<div class="highlight"><pre><span></span>pip install ics
+</pre></div>
+<p>away and is documented nicely at <a href="https://icspy.readthedocs.io/en/stable/index.html">https://icspy.readthedocs.io/en/stable/index.html</a>.</p>
+
+</div>
+</div>
+</div>
+    </div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../../../../categories/python/" rel="tag">python</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../new-blog/" rel="prev" title="New blog">Previous post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+        
+    
+<div id="comment-section"></div>
+
+
+<div id="respond">
+<form id="comment-form" method="post" class="" action="https://staticman-freininghaus.herokuapp.com/v3/entry/github/freininghaus/freininghaus.github.io/main/comments">
+
+<fieldset id="comments-fieldset">
+<input type="hidden" name="options[origin]" value="posts/2022-03-01-garbage-collection-calendar/garbage-collection-calendar.ipynb"><input type="hidden" id="comment-replying-to-uid" name="fields[replying-to-id]" value=""><input type="hidden" name="options[title]" value="Getting rid of waste: manipulating calendars with Python and the ics library"><div class="form-group mt-4">
+    <label for="comment-form-message"><h3>Add Comment</h3></label>
+    <textarea class="form-control" name="fields[message]" type="text" id="comment-form-message" placeholder="Your comment (markdown accepted)" required rows="6"></textarea>
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-name">Name</label>
+    <input class="form-control" name="fields[author]" type="text" id="comment-form-name" placeholder="Your name (required)" required>
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-email">E-mail</label>
+    <input class="form-control" name="fields[email]" type="email" id="comment-form-email" placeholder="Your email (optional)">
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-email">Website</label>
+    <input class="form-control" name="fields[url]" type="url" id="comment-form-url" placeholder="Link to your website (optional)">
+</div>
+
+  <div class="form-group" style="display:none;">
+    <label for="hp">Hp</label>
+    <input class="form-control" name="fields[hp]" id="hp" type="text" placeholder="Leave blank">
+</div>
+
+
+  <button class="btn btn-primary" id="comment-form-submit">
+    Submit comment
+  </button>
+
+</fieldset>
+</form>
+</div>
+
+<div class="modal" id="comments-modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="comments-modal-title"></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="comments-modal-text"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- script for moving the comment form next to a comment for replies -->
+<script src="../../../../../assets/js/staticman_comments.js"></script><!-- icon for the button while comment submission is in progress --><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><symbol id="icon-loading" viewbox="149.8 37.8 499.818 525"><path d="M557.8 187.8c13.8 0 24.601-10.8 24.601-24.6S571.6 138.6 557.8 138.6s-24.6 10.8-24.6 24.6c0 13.2 10.8 24.6 24.6 24.6zm61.2 90.6c-16.8 0-30.6 13.8-30.6 30.6s13.8 30.6 30.6 30.6 30.6-13.8 30.6-30.6c.6-16.8-13.2-30.6-30.6-30.6zm-61.2 145.2c-20.399 0-36.6 16.2-36.6 36.601 0 20.399 16.2 36.6 36.6 36.6 20.4 0 36.601-16.2 36.601-36.6C595 439.8 578.2 423.6 557.8 423.6zM409 476.4c-24 0-43.2 19.199-43.2 43.199s19.2 43.2 43.2 43.2 43.2-19.2 43.2-43.2S433 476.4 409 476.4zM260.8 411c-27 0-49.2 22.2-49.2 49.2s22.2 49.2 49.2 49.2 49.2-22.2 49.2-49.2-22.2-49.2-49.2-49.2zm-10.2-102c0-27.6-22.8-50.4-50.4-50.4-27.6 0-50.4 22.8-50.4 50.4 0 27.6 22.8 50.4 50.4 50.4 27.6 0 50.4-22.2 50.4-50.4zm10.2-199.8c-30 0-54 24-54 54s24 54 54 54 54-24 54-54-24.6-54-54-54zM409 37.8c-35.4 0-63.6 28.8-63.6 63.6S374.2 165 409 165s63.6-28.8 63.6-63.6-28.2-63.6-63.6-63.6z"></path></symbol></svg></section><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" integrity="sha384-3lJUsx1TJHt7BA4udB5KPnDrlkO8T6J6v/op7ui0BbCjvZ9WqV4Xm6DTP6kQ/iBH" crossorigin="anonymous"></script><script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$latex ','$'], ['\\(','\\)']]}});
+        </script></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+            
+        </footer>
+</div>
+</div>
+
+
+            <script src="../../../../../assets/js/jquery.min.js"></script><script src="../../../../../assets/js/popper.min.js"></script><script src="../../../../../assets/js/bootstrap.min.js"></script><script src="../../../../../assets/js/baguetteBox.min.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>
