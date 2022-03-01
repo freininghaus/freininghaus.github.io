@@ -1,0 +1,4 @@
+Sitemap: https://freininghaus.github.io/sitemapindex.xml
+
+User-Agent: *
+Host: freininghaus.github.io
