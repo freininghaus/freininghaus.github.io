@@ -1,2 +1,3 @@
-nikola[extras]==8.2.0
+nikola[extras]==8.2.2
+jupyter-contrib-nbextensions==0.5.1
 pymd4c==1.1.2
