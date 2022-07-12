@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: test
+  name: hello
+spec:
+  rules:
+    - host: hello.127.0.0.1.sslip.io
+      http:
+        paths:
+          - backend:
+              service:
+                name: hello
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
