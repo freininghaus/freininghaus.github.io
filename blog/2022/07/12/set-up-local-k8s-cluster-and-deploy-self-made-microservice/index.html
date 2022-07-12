@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to set up a local Kubernetes cluster and deploy a self-made microservice in less than 10 minutes | Frank Reininghaus</title>
+<link href="../../../../../assets/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/baguetteBox.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/rst.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/code.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/theme.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/custom.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/ipython.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/nikola_ipython.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../../../../rss.xml">
+<link rel="canonical" href="https://freininghaus.github.io/blog/2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/">
+<!--[if lt IE 9]><script src="../../../../../../../../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Frank Reininghaus">
+<link rel="prev" href="../../../03/01/getting-rid-of-waste-manipulating-calendars-with-python-and-ics/" title="Getting rid of waste: manipulating calendars with Python and the ics library" type="text/html">
+<meta property="og:site_name" content="Frank Reininghaus">
+<meta property="og:title" content="How to set up a local Kubernetes cluster and deploy a self-made micros">
+<meta property="og:url" content="https://freininghaus.github.io/blog/2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/">
+<meta property="og:description" content="Nowadays, many server applications are not installed and run directly on physical hosts or virtual machines any more. Instead, application code is often built into container images, and run in so-call">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2022-07-12T20:01:51Z">
+<meta property="article:tag" content="docker">
+<meta property="article:tag" content="kubernetes">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../../../../">
+
+            <span id="blog-title">Frank Reininghaus</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../../../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../../../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../../../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+<a href="../../../../../pages/about/" class="nav-link">About</a>
+
+                
+                
+                    
+    
+    </li>
+<li class="nav-item">
+    <a href="index.ipynb" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+        
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">How to set up a local Kubernetes cluster and deploy a self-made microservice in less than 10 minutes</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Frank Reininghaus
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2022-07-12T20:01:51Z" itemprop="datePublished" title="2022-07-12">2022-07-12</time></a>
+            </p>
+                <p class="commentline">
+    
+<a href="#comment-section">Comments</a>
+
+
+            
+        </p>
+<p class="sourceline"><a href="index.ipynb" class="sourcelink">Source</a></p>
+
+        </div>
+        
+
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Nowadays, many server applications are not installed and run directly on physical hosts or virtual machines any more. Instead, application code is often built into container images, and run in so-called <em>pods</em> in a Kubernetes cluster. Kubernetes provides a standardized way to orchestrate applications and works the same way no matter where the cluster is running.</p>
+<p>Kubernetes clusters are often hosted and managed by cloud providers. They can also be deployed on-premise though, and either be created and managed by a service provider, or with tools like <a href="https://github.com/kubernetes-sigs/kubespray">Kubespray</a>. Most clusters are long-lived, and consist of multiple nodes for redundancy.</p>
+<p>However, sometimes a cluster that can be created and discarded quickly and easily on a single computer can be very useful:</p>
+<ul>
+<li>A developer might want to create a cluster on their development machine for playing around with Kubernetes, exploring the newest tools, or testing their newly developed code and Kubernetes resources. If they used a cluster that is shared with others or even with production workloads instead, they might get into the way of others, or worse, break things that should better not break.</li>
+<li>Another use case is automated testing of application deployments in Kubernetes, or testing of applications that interact with Kubernetes resources themselves. This works best in a dedicated cluster that is set up in a clean state just for this purpose, and thrown away after the tests.</li>
+</ul>
+<!-- TEASER_END --><p>There are a few solutions for setting up a local Kubernetes cluster. I choose <a href="https://k3d.io/"><em>k3d</em></a> here because it is pretty easy to use - it is a single binary that requires only Docker to create its cluster in a container. Unlike <a href="https://kind.sigs.k8s.io/"><em>kind</em></a>, which I also like a lot and which follows the same approach, it has an ingress controller built in. This makes accessing the applications that run in the cluster easier, and allows testing of ingress resources. With kind, this can also be done, but only after an ingress controller has been installed.</p>
+<p>This post shows how to set up a cluster with k3d, and deploy a self-made application. It does not assume any prior Kubernetes knowledge. If you have some Kubernetes experience, and you are interested in playing around with k3d, feel free to skip most of the text and just look at the commands 🙂
+You can also download the <a href="index.ipynb">Jupyter notebook</a> that this post is based on, and play around with it.</p>
+<p>I use Linux to work with k3d and Kubernetes in general, but most of what I do should work pretty much the same way on a Mac. Trying it on Windows might require more modifictions though.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Installing-k3d-and-kubectl">Installing k3d and kubectl<a class="anchor-link" href="#Installing-k3d-and-kubectl">¶</a>
+</h3>
+<p>We will need not only k3d, but also <em>kubectl</em>, which is the command-line interface for interacting with Kubernetes clusters.</p>
+<p>There is a range of installation options. I prefer using <a href="https://github.com/alexellis/arkade"><em>arkade</em></a>, which allows to install many tools that are related to Kubernetes easily.</p>
+<p>We will use the arkade installation script as <a href="https://github.com/alexellis/arkade#getting-arkade">recommended in its README</a>, but run it without root permissions:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [1]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>curl -sLS https://get.arkade.dev <span class="p">|</span> sh
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>x86_64
+Downloading package https://github.com/alexellis/arkade/releases/download/0.8.28/arkade as /home/frank/code/github/freininghaus/freininghaus.github.io/posts/2022-07-12-local-k8s-cluster-with-k3d/arkade
+Download complete.
+
+============================================================
+  The script was run as a user who is unable to write
+  to /usr/local/bin. To complete the installation the
+  following commands may need to be run manually.
+============================================================
+
+  sudo cp arkade /usr/local/bin/arkade
+  sudo ln -sf /usr/local/bin/arkade /usr/local/bin/ark
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We could now move the <code>arkade</code> binary to a directory in our <code>PATH</code>, or re-run the download script with root permissions. But we can also run the binary from the current directory and use it to install the tools that we need:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [2]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>./arkade get kubectl k3d jq &gt; /dev/null
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>44.73 MiB / 44.73 MiB [------------------------------------------------] 100.00%
+2022/07/12 13:56:22 Copying /tmp/kubectl to /home/frank/.arkade/bin/kubectl
+2022/07/12 13:56:23 Looking up version for k3d
+2022/07/12 13:56:23 Found: v5.4.4
+16.77 MiB / 16.77 MiB [------------------------------------------------] 100.00%
+2022/07/12 13:56:24 Looking up version for k3d
+2022/07/12 13:56:24 Found: v5.4.4
+2022/07/12 13:56:24 Copying /tmp/k3d-linux-amd64 to /home/frank/.arkade/bin/k3d
+2022/07/12 13:56:24 Looking up version for jq
+2022/07/12 13:56:24 Found: jq-1.6
+3.77 MiB / 3.77 MiB [--------------------------------------------------] 100.00%
+2022/07/12 13:56:24 Looking up version for jq
+2022/07/12 13:56:24 Found: jq-1.6
+2022/07/12 13:56:24 Copying /tmp/jq-linux64 to /home/frank/.arkade/bin/jq
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We will add the directory where <code>arkade</code> puts the downloaded tools to the <code>PATH</code> for convenience:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span><span class="nb">export</span> <span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:<span class="nv">$HOME</span>/.arkade/bin/
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Creating-a-local-Kubernetes-cluster-with-k3d">Creating a local Kubernetes cluster with k3d<a class="anchor-link" href="#Creating-a-local-Kubernetes-cluster-with-k3d">¶</a>
+</h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now that we have downloaded k3d, we can use it to create our first local Kubernetes cluster. We will give it the name <code>test-cluster</code> and forward port 80 on the host to port 80 in the container which matches the node filter "loadbalancer". This will enable easy HTTP/HTTPS access to apps running in the cluster via ingress routes, as we will see in the next post.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [4]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>k3d cluster create test-cluster -p <span class="s2">"80:80@loadbalancer"</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-cyan-fg">INFO</span>[0000] portmapping '80:80' targets the loadbalancer: defaulting to [servers:*:proxy agents:*:proxy] 
+<span class="ansi-cyan-fg">INFO</span>[0000] Prep: Network                                
+<span class="ansi-cyan-fg">INFO</span>[0000] Created network 'k3d-test-cluster'           
+<span class="ansi-cyan-fg">INFO</span>[0000] Created image volume k3d-test-cluster-images 
+<span class="ansi-cyan-fg">INFO</span>[0000] Starting new tools node...                   
+<span class="ansi-cyan-fg">INFO</span>[0000] Starting Node 'k3d-test-cluster-tools'       
+<span class="ansi-cyan-fg">INFO</span>[0001] Creating node 'k3d-test-cluster-server-0'    
+<span class="ansi-cyan-fg">INFO</span>[0001] Creating LoadBalancer 'k3d-test-cluster-serverlb' 
+<span class="ansi-cyan-fg">INFO</span>[0001] Using the k3d-tools node to gather environment information 
+<span class="ansi-cyan-fg">INFO</span>[0002] HostIP: using network gateway 172.31.0.1 address 
+<span class="ansi-cyan-fg">INFO</span>[0002] Starting cluster 'test-cluster'              
+<span class="ansi-cyan-fg">INFO</span>[0002] Starting servers...                          
+<span class="ansi-cyan-fg">INFO</span>[0002] Starting Node 'k3d-test-cluster-server-0'    
+<span class="ansi-cyan-fg">INFO</span>[0009] All agents already running.                  
+<span class="ansi-cyan-fg">INFO</span>[0009] Starting helpers...                          
+<span class="ansi-cyan-fg">INFO</span>[0009] Starting Node 'k3d-test-cluster-serverlb'    
+<span class="ansi-cyan-fg">INFO</span>[0017] Injecting records for hostAliases (incl. host.k3d.internal) and for 2 network members into CoreDNS configmap... 
+<span class="ansi-cyan-fg">INFO</span>[0019] Cluster 'test-cluster' created successfully! 
+<span class="ansi-cyan-fg">INFO</span>[0019] You can now use it like this:                
+kubectl cluster-info
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We can verify that our cluster is running and can be accessed via <code>kubectl</code>:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [5]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>kubectl cluster-info
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-green-fg">Kubernetes control plane</span> is running at <span class="ansi-yellow-fg">https://0.0.0.0:39309</span>
+<span class="ansi-green-fg">CoreDNS</span> is running at <span class="ansi-yellow-fg">https://0.0.0.0:39309/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy</span>
+<span class="ansi-green-fg">Metrics-server</span> is running at <span class="ansi-yellow-fg">https://0.0.0.0:39309/api/v1/namespaces/kube-system/services/https:metrics-server:https/proxy</span>
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>The cluster has a single node:<a href="#fn:k3d-multiple-nodes"><sup id="fnref:k3d-multiple-nodes">1</sup></a></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [6]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>kubectl get nodes
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>NAME                        STATUS     ROLES                  AGE   VERSION
+k3d-test-cluster-server-0   NotReady   control-plane,master   6s    v1.23.8+k3s1
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Note that the status of the node is <code>NotReady</code>. We can either wait for a few seconds, or use <code>kubectl wait</code>, which runs until the given condition is met:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [7]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>kubectl <span class="nb">wait</span> --for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>ready node k3d-test-cluster-server-0
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>node/k3d-test-cluster-server-0 condition met
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [8]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>kubectl get nodes
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>NAME                        STATUS   ROLES                  AGE   VERSION
+k3d-test-cluster-server-0   Ready    control-plane,master   9s    v1.23.8+k3s1
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Create-a-simple-web-service">Create a simple web service<a class="anchor-link" href="#Create-a-simple-web-service">¶</a>
+</h3>
+<p>Let's build a simple application that we will deploy and test in our cluster. We will do it in Python with <a href="https://fastapi.tiangolo.com/">FastAPI</a> (but we could just as well use any other programming language and framework, of course).</p>
+<p>The app accepts GET requests at the endpoint <code>/greet/{name}</code>, where a name can be substituted for <code>name</code>. It responds with a small JSON object that contains a greeting, and also the host name. This will be interesting later on when multiple instances of the application are running.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [9]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span><span class="c1"># I like to use https://pygments.org/ for syntax highlighting</span>
+<span class="nb">alias</span> <span class="nv">cat</span><span class="o">=</span>pygmentize
+
+cat hello-server/hello-app.py
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-bold" style="color: rgb(0,135,0)">import</span> <span class="ansi-bold" style="color: rgb(0,0,255)">fastapi</span>
+<span class="ansi-bold" style="color: rgb(0,135,0)">import</span> <span class="ansi-bold" style="color: rgb(0,0,255)">socket</span>
+
+app <span style="color: rgb(98,98,98)">=</span> fastapi<span style="color: rgb(98,98,98)">.</span>FastAPI()
+
+
+<span style="color: rgb(175,0,255)">@app</span><span style="color: rgb(98,98,98)">.</span>get(<span style="color: rgb(175,0,0)">"</span><span style="color: rgb(175,0,0)">/greet/</span><span class="ansi-bold" style="color: rgb(175,95,135)">{name}</span><span style="color: rgb(175,0,0)">"</span>)
+<span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">greet</span>(name: <span style="color: rgb(0,135,0)">str</span>):
+    <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> {
+        <span style="color: rgb(175,0,0)">"</span><span style="color: rgb(175,0,0)">data</span><span style="color: rgb(175,0,0)">"</span>: {
+            <span style="color: rgb(175,0,0)">"</span><span style="color: rgb(175,0,0)">message</span><span style="color: rgb(175,0,0)">"</span>: <span style="color: rgb(175,0,0)">f</span><span style="color: rgb(175,0,0)">"</span><span style="color: rgb(175,0,0)">Hello </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>name<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span style="color: rgb(175,0,0)">!</span><span style="color: rgb(175,0,0)">"</span>
+        },
+        <span style="color: rgb(175,0,0)">"</span><span style="color: rgb(175,0,0)">info</span><span style="color: rgb(175,0,0)">"</span>: {
+            <span style="color: rgb(175,0,0)">"</span><span style="color: rgb(175,0,0)">hostname</span><span style="color: rgb(175,0,0)">"</span>: socket<span style="color: rgb(98,98,98)">.</span>gethostname()
+        }
+    }
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Build-Docker-image">Build Docker image<a class="anchor-link" href="#Build-Docker-image">¶</a>
+</h3>
+<p>The <code>Dockerfile</code> is quite simple. We just have to copy the Python file into a Python base image and install the dependencies <code>fastapi</code> and <code>uvicorn</code>. The latter is the web server that we will use.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [10]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>cat hello-server/Dockerfile
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-bold" style="color: rgb(0,135,0)">FROM</span><span style="color: rgb(188,188,188)"> </span><span style="color: rgb(175,0,0)">python:3.10-slim</span>
+
+<span class="ansi-bold" style="color: rgb(0,135,0)">COPY</span><span style="color: rgb(188,188,188)"> </span>hello-app.py ./
+
+<span class="ansi-bold" style="color: rgb(0,135,0)">RUN</span><span style="color: rgb(188,188,188)"> </span>pip install fastapi uvicorn<span style="color: rgb(98,98,98)">[</span>standard<span style="color: rgb(98,98,98)">]</span> &gt;/dev/null <span style="color: rgb(98,98,98)">2</span>&gt;&amp;<span style="color: rgb(98,98,98)">1</span>
+
+<span class="ansi-bold" style="color: rgb(0,135,0)">CMD</span><span style="color: rgb(188,188,188)"> </span>uvicorn hello-app:app --host <span style="color: rgb(98,98,98)">0</span>.0.0.0
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [11]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>docker build hello-server/ -t my-hello-server
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Sending build context to Docker daemon  6.656kB
+Step 1/4 : FROM python:3.10-slim
+ ---&gt; 24aa51b1b3e9
+Step 2/4 : COPY hello-app.py ./
+ ---&gt; 11c437b4a570
+Step 3/4 : RUN pip install fastapi uvicorn[standard] &gt;/dev/null 2&gt;&amp;1
+ ---&gt; Running in f79cefe640e2
+Removing intermediate container f79cefe640e2
+ ---&gt; 5b57681458aa
+Step 4/4 : CMD uvicorn hello-app:app --host 0.0.0.0
+ ---&gt; Running in 51940227c7ac
+Removing intermediate container 51940227c7ac
+ ---&gt; c1b8d149b4a9
+Successfully built c1b8d149b4a9
+Successfully tagged my-hello-server:latest
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Import-the-Docker-image-into-the-Kubernetes-cluster">Import the Docker image into the Kubernetes cluster<a class="anchor-link" href="#Import-the-Docker-image-into-the-Kubernetes-cluster">¶</a>
+</h3>
+<p>To run our service in the Kubernetes cluster, the nodes in the cluster need access to the image. This can be achieved in several ways: we could either</p>
+<ul>
+<li>push the image to a public registry,</li>
+<li>push the image to a private registry, and configure the cluster such that it has access to this registry, or</li>
+<li>load the image to the nodes in the cluster directly.</li>
+</ul>
+<p>Usually, the third option is the easiest when we run tests and experiments on the local development machine, so we will use it here.<a href="#fn:local-image-caveat"><sup id="fnref:local-image-caveat">2</sup></a></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [12]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>k3d image import my-hello-server --cluster test-cluster
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-cyan-fg">INFO</span>[0000] Importing image(s) into cluster 'test-cluster' 
+<span class="ansi-cyan-fg">INFO</span>[0000] Starting new tools node...                   
+<span class="ansi-cyan-fg">INFO</span>[0000] Starting Node 'k3d-test-cluster-tools'       
+<span class="ansi-cyan-fg">INFO</span>[0001] Saving 1 image(s) from runtime...            
+<span class="ansi-cyan-fg">INFO</span>[0005] Importing images into nodes...               
+<span class="ansi-cyan-fg">INFO</span>[0005] Importing images from tarball '/k3d/images/k3d-test-cluster-images-20220712134140.tar' into node 'k3d-test-cluster-server-0'... 
+<span class="ansi-cyan-fg">INFO</span>[0031] Removing the tarball(s) from image volume... 
+<span class="ansi-cyan-fg">INFO</span>[0032] Removing k3d-tools node...                   
+<span class="ansi-cyan-fg">INFO</span>[0032] Successfully imported image(s)               
+<span class="ansi-cyan-fg">INFO</span>[0032] Successfully imported 1 image(s) into 1 cluster(s) 
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Create-a-namespace-for-the-application">Create a namespace for the application<a class="anchor-link" href="#Create-a-namespace-for-the-application">¶</a>
+</h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Before deploying our application, we will create a new <em>namespace</em>. It will contain all Kubernetes resources that belong to, or interact with, our application.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [13]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>kubectl create namespace <span class="nb">test</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>namespace/test created
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>While not stricly necessary, putting each independent application into its own namespace is a good practice. Advantages of this approach include:</p>
+<ul>
+<li>If anything is seriously wrong with the Kubernetes resources of an application, its namespace can be deleted, and one can start from scratch without affecting other applications running in the Kubernetes cluster.</li>
+<li>One can create a service account that has only the permissions to view, modify, or create resources in one namespace. Such an account can be used for automated interactions with the cluster, e.g., in continuous integration pipelines. Any accidental effects on applications running in other namespaces can then be avoided.</li>
+<li>
+<a href="https://kubernetes.io/docs/concepts/policy/resource-quotas/">Resource quotas</a> can be assigned to namespaces to limit the amount of resources that the applications in a namespace can use.</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now we would like to deploy our application in the new namespace.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="In-Kubernetes,-applications-run-in-pods">In Kubernetes, applications run in pods<a class="anchor-link" href="#In-Kubernetes,-applications-run-in-pods">¶</a>
+</h3>
+<p>In Kubernetes, the "smallest deployable units of computing that you can create and manage" are <a href="https://kubernetes.io/docs/concepts/workloads/pods/"><em>pods</em></a>. A pod is essentially a set of one or more containers which can share some resources, like network and storage. In our case, a single container, which runs the image that we have just built and uploaded to the cluster, is sufficient.</p>
+<p>Kubernetes resources are usually defined in YAML files, although it is possible to create some types of resources with <code>kubectl create</code> directly on the command line.<a href="#fn:k8s-resources-command-line"><sup id="fnref:k8s-resources-command-line">3</sup></a> A pod that runs our application, and that lives in the namespace <code>test</code>, could be defined like this:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [14]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>cat k8s-resources/pod.yaml
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-bold" style="color: rgb(0,135,0)">apiVersion</span>:<span style="color: rgb(188,188,188)"> </span>v1
+<span class="ansi-bold" style="color: rgb(0,135,0)">kind</span>:<span style="color: rgb(188,188,188)"> </span>Pod
+<span class="ansi-bold" style="color: rgb(0,135,0)">metadata</span>:
+<span style="color: rgb(188,188,188)">  </span><span class="ansi-bold" style="color: rgb(0,135,0)">namespace</span>:<span style="color: rgb(188,188,188)"> </span>test
+<span style="color: rgb(188,188,188)">  </span><span class="ansi-bold" style="color: rgb(0,135,0)">name</span>:<span style="color: rgb(188,188,188)"> </span>hello
+<span style="color: rgb(188,188,188)">  </span><span class="ansi-bold" style="color: rgb(0,135,0)">labels</span>:
+<span style="color: rgb(188,188,188)">    </span><span class="ansi-bold" style="color: rgb(0,135,0)">app</span>:<span style="color: rgb(188,188,188)"> </span>hello
+<span class="ansi-bold" style="color: rgb(0,135,0)">spec</span>:
+<span style="color: rgb(188,188,188)">  </span><span class="ansi-bold" style="color: rgb(0,135,0)">containers</span>:
+<span style="color: rgb(188,188,188)">  </span>-<span style="color: rgb(188,188,188)"> </span><span class="ansi-bold" style="color: rgb(0,135,0)">name</span>:<span style="color: rgb(188,188,188)"> </span>hello-server
+<span style="color: rgb(188,188,188)">    </span><span class="ansi-bold" style="color: rgb(0,135,0)">image</span>:<span style="color: rgb(188,188,188)"> </span>my-hello-server
+<span style="color: rgb(188,188,188)">    </span><span class="ansi-bold" style="color: rgb(0,135,0)">imagePullPolicy</span>:<span style="color: rgb(188,188,188)"> </span>IfNotPresent
+<span style="color: rgb(188,188,188)">    </span><span class="ansi-bold" style="color: rgb(0,135,0)">ports</span>:
+<span style="color: rgb(188,188,188)">    </span>-<span style="color: rgb(188,188,188)"> </span><span class="ansi-bold" style="color: rgb(0,135,0)">containerPort</span>:<span style="color: rgb(188,188,188)"> </span>8000
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Each Kubernetes resource definition has a number of top-level keys:</p>
+<ul>
+<li>The <code>apiVersion</code> tells what version the resource comes from.</li>
+<li>The <code>kind</code> tells what kind of resource is defined.</li>
+<li>The <code>metadata</code> include the name of the resource, the namespace that it belongs to, and labels. Labels can be used for multiple purposes, some of which will will se later.</li>
+<li>The <code>spec</code> defines the properties of the resource. In the case of a pod, this includes the containers that the pod consists of. Note that we have to set the <code>imagePullPolicy</code> to <code>IfNotPresent</code> here. Otherwise, Kubernetes would try to pull the image, which does not work unless it has been pushed to a registry that the cluster can access.</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We could now create the pod in the cluster with <code>kubectl apply -f k8s-resources/pod.yaml</code>. However, the more common approach is to create Kubernetes resources which control the creation of pods, such as, e.g., <a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/"><em>deployments</em></a>, <a href="https://kubernetes.io/docs/concepts/workloads/controllers/job/"><em>jobs</em></a>, or <a href="https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/"><em>daemon sets</em></a>.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Define-a-deployment-that-controls-the-pods-running-an-application">Define a deployment that controls the pods running an application<a class="anchor-link" href="#Define-a-deployment-that-controls-the-pods-running-an-application">¶</a>
+</h3>
+<p>Here will will use a deployment, which ensures that a certain number of pods of a given type are running in the cluster.<a href="#fn:replicaset"><sup id="fnref:replicaset">4</sup></a> Having more than one pod of a certain type, e.g., a web service that answers incoming requests, can have a number of advantages:</p>
+<ul>
+<li>Distributing the incoming traffic over multiple pods can be beneficial because a single pod might not be able to handle a sufficient number of simultaneous requests.</li>
+<li>It helps to improve the reliability of the system: if a single pod terminates for whatever reason, the other pods can take over request handling immediately.</li>
+</ul>
+<p>If a pod terminates, e.g., because of a crash in the application or because the node on which it is running is shut down, a new pod is created automatically, possibly on another node. Moreover, deployments can do other useful things concerning the life cycle of pods. For example, updates of the image version or other parts of the pod spec can be done with zero downtime. The deployment ensures that pods are created and destroyed dynamically at a controlled rate.</p>
+<p>Note that this may not work well if a pod needs a lot of internal state to do its work. Kubernetes works best with stateless applications.<a href="#fn:statefulset"><sup id="fnref:statefulset">5</sup></a></p>
+<p>Let's see what a deployment looks like:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [15]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>cat k8s-resources/deployment.yaml
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-bold" style="color: rgb(0,135,0)">apiVersion</span>:<span style="color: rgb(188,188,188)"> </span>apps/v1
+<span class="ansi-bold" style="color: rgb(0,135,0)">kind</span>:<span style="color: rgb(188,188,188)"> </span>Deployment
+<span class="ansi-bold" style="color: rgb(0,135,0)">metadata</span>:
+<span style="color: rgb(188,188,188)">  </span><span class="ansi-bold" style="color: rgb(0,135,0)">namespace</span>:<span style="color: rgb(188,188,188)"> </span>test
+<span style="color: rgb(188,188,188)">  </span><span class="ansi-bold" style="color: rgb(0,135,0)">name</span>:<span style="color: rgb(188,188,188)"> </span>hello
+<span class="ansi-bold" style="color: rgb(0,135,0)">spec</span>:
+<span style="color: rgb(188,188,188)">  </span><span class="ansi-bold" style="color: rgb(0,135,0)">replicas</span>:<span style="color: rgb(188,188,188)"> </span>3
+<span style="color: rgb(188,188,188)">  </span><span class="ansi-bold" style="color: rgb(0,135,0)">selector</span>:
+<span style="color: rgb(188,188,188)">    </span><span class="ansi-bold" style="color: rgb(0,135,0)">matchLabels</span>:
+<span style="color: rgb(188,188,188)">      </span><span class="ansi-bold" style="color: rgb(0,135,0)">app</span>:<span style="color: rgb(188,188,188)"> </span>hello
+<span style="color: rgb(188,188,188)">  </span><span class="ansi-bold" style="color: rgb(0,135,0)">template</span>:
+<span style="color: rgb(188,188,188)">    </span><span class="ansi-bold" style="color: rgb(0,135,0)">metadata</span>:
+<span style="color: rgb(188,188,188)">      </span><span class="ansi-bold" style="color: rgb(0,135,0)">labels</span>:
+<span style="color: rgb(188,188,188)">        </span><span class="ansi-bold" style="color: rgb(0,135,0)">app</span>:<span style="color: rgb(188,188,188)"> </span>hello
+<span style="color: rgb(188,188,188)">    </span><span class="ansi-bold" style="color: rgb(0,135,0)">spec</span>:
+<span style="color: rgb(188,188,188)">      </span><span class="ansi-bold" style="color: rgb(0,135,0)">containers</span>:
+<span style="color: rgb(188,188,188)">      </span>-<span style="color: rgb(188,188,188)"> </span><span class="ansi-bold" style="color: rgb(0,135,0)">name</span>:<span style="color: rgb(188,188,188)"> </span>hello-server
+<span style="color: rgb(188,188,188)">        </span><span class="ansi-bold" style="color: rgb(0,135,0)">image</span>:<span style="color: rgb(188,188,188)"> </span>my-hello-server
+<span style="color: rgb(188,188,188)">        </span><span class="ansi-bold" style="color: rgb(0,135,0)">imagePullPolicy</span>:<span style="color: rgb(188,188,188)"> </span>IfNotPresent
+<span style="color: rgb(188,188,188)">        </span><span class="ansi-bold" style="color: rgb(0,135,0)">ports</span>:
+<span style="color: rgb(188,188,188)">        </span>-<span style="color: rgb(188,188,188)"> </span><span class="ansi-bold" style="color: rgb(0,135,0)">containerPort</span>:<span style="color: rgb(188,188,188)"> </span>8000
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>The <code>spec</code> of the deployent describes the pods that it should control:</p>
+<ul>
+<li>
+<code>replicas: 3</code> tells Kubernetes that three pods should be running at all times.</li>
+<li>The <code>template</code> describes what each pod should look like. Note that this object looks a lot like the definition of the plain pod that we saw earlier.</li>
+<li>The <code>selector</code> describes how the deployment finds the pods that it controls. The <code>matchLabels</code> are compared with the <code>labels</code> in the <code>metadata</code> of all pods for this purpose.</li>
+</ul>
+<p>To create the deployment in the cluster, we use this command:<a href="#fn:apply-deployment-updates"><sup id="fnref:apply-deployment-updates">6</sup></a></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [16]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>kubectl apply -f k8s-resources/deployment.yaml
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>deployment.apps/hello created
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>If we look at the list of pods in our namespace now, we get this result:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [17]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>kubectl -n <span class="nb">test</span> get pod -o wide
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>NAME                     READY   STATUS              RESTARTS   AGE   IP       NODE                        NOMINATED NODE   READINESS GATES
+hello-6ddc49b4d4-vzzc8   0/1     ContainerCreating   0          0s    &lt;none&gt;   k3d-test-cluster-server-0   &lt;none&gt;           &lt;none&gt;
+hello-6ddc49b4d4-5vdwc   0/1     ContainerCreating   0          0s    &lt;none&gt;   k3d-test-cluster-server-0   &lt;none&gt;           &lt;none&gt;
+hello-6ddc49b4d4-dlm7w   0/1     ContainerCreating   0          0s    &lt;none&gt;   k3d-test-cluster-server-0   &lt;none&gt;           &lt;none&gt;
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>There are three pods because we set the number of replicas to three in the definition of the deployment. Moreover, all pods have the status <code>ContainerCreating</code>, so they are not active yet.</p>
+<p>Now we can either wait for a few seconds, or use <code>kubectl rollout status</code> to wait until all pods are running:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [18]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>kubectl -n <span class="nb">test</span> rollout status deployment/hello
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Waiting for deployment "hello" rollout to finish: 0 of 3 updated replicas are available...
+Waiting for deployment "hello" rollout to finish: 1 of 3 updated replicas are available...
+Waiting for deployment "hello" rollout to finish: 2 of 3 updated replicas are available...
+deployment "hello" successfully rolled out
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now all pods are running. We can also see that each pod got its own IP address:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [19]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>kubectl -n <span class="nb">test</span> get pod -o wide
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>NAME                     READY   STATUS    RESTARTS   AGE   IP           NODE                        NOMINATED NODE   READINESS GATES
+hello-6ddc49b4d4-5vdwc   1/1     Running   0          3s    10.42.0.9    k3d-test-cluster-server-0   &lt;none&gt;           &lt;none&gt;
+hello-6ddc49b4d4-vzzc8   1/1     Running   0          3s    10.42.0.11   k3d-test-cluster-server-0   &lt;none&gt;           &lt;none&gt;
+hello-6ddc49b4d4-dlm7w   1/1     Running   0          3s    10.42.0.10   k3d-test-cluster-server-0   &lt;none&gt;           &lt;none&gt;
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Accessing-the-pods-via-HTTP-within-the-Kubernetes-cluster">Accessing the pods via HTTP within the Kubernetes cluster<a class="anchor-link" href="#Accessing-the-pods-via-HTTP-within-the-Kubernetes-cluster">¶</a>
+</h3>
+<p>The IP addresses which Kubernetes assigns to the pods are not reachable from outside the cluster. We will consider how to use a Kubernetes <em>service</em> and an <em>ingress</em> to make our application accessible for the outside world in the next post.</p>
+<p>For the time being, we can use those IP addresses to connect to the pods from other pods in the cluster though, as we will show next.</p>
+<p>To get the IP address of one of the pods, we could look at the output of <code>kubectl -n test get pod -o wide</code> above. We could also parse the output with shell commands to assign the IP to a variable. However, <code>kubectl</code> also offers other output formats which are easier to process:</p>
+<ul>
+<li>
+<code>-o json</code> outputs a JSON object that contains all information about pods.</li>
+<li>
+<code>-o jsonpath=...</code> allows to specify a path to the information we need inside the JSON object, and prints just that.</li>
+</ul>
+<p>By looking for IP addresses in the JSON output (which I will not show here because it is rather lengthy), we conclude that the IP address of the first pod in the list can be obtained like this:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [20]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span><span class="nv">first_pod_ip</span><span class="o">=</span><span class="k">$(</span>kubectl -n <span class="nb">test</span> get pods -o <span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.items[0].status.podIPs[].ip}'</span><span class="k">)</span>
+<span class="nb">echo</span> <span class="nv">$first_pod_ip</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>10.42.0.9
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>To verify that the application can be reached at this address from within the cluster, we create a new pod, which serves as the client that accesses our application. This can be done like this:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [21]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>kubectl run --rm --attach -q --image<span class="o">=</span>busybox --restart Never my-test-pod -- wget <span class="nv">$first_pod_ip</span>:8000/greet/Frank -q -O - <span class="p">|</span> jq .
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-bold">{
+  </span><span class="ansi-blue-intense-fg ansi-bold">"data"</span><span class="ansi-bold">: </span><span class="ansi-bold">{
+    </span><span class="ansi-blue-intense-fg ansi-bold">"message"</span><span class="ansi-bold">: </span><span class="ansi-green-fg">"Hello Frank!"</span><span class="ansi-bold">
+  </span><span class="ansi-bold">}</span><span class="ansi-bold">,
+  </span><span class="ansi-blue-intense-fg ansi-bold">"info"</span><span class="ansi-bold">: </span><span class="ansi-bold">{
+    </span><span class="ansi-blue-intense-fg ansi-bold">"hostname"</span><span class="ansi-bold">: </span><span class="ansi-green-fg">"hello-6ddc49b4d4-5vdwc"</span><span class="ansi-bold">
+  </span><span class="ansi-bold">}</span><span class="ansi-bold">
+</span><span class="ansi-bold">}</span>
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We have sucessfully made an HTTP request to our application! Note that the <code>hostname</code> in the output is indeed the name of the first pod, whose IP address we have used here.</p>
+<p>The options to <code>kubectl run</code> have the following meaning:</p>
+<ul>
+<li>
+<code>--rm</code> ensures that the pod is deleted after it exits, such that it no longer occupies resources in the cluster.</li>
+<li>
+<code>--attach</code> attaches to the process in the pod, such that we can see its output in the terminal.</li>
+<li>
+<code>-q</code> suppresses output from <code>kubectl</code> - we are only interested in output from <code>wget</code>.</li>
+<li>
+<code>--image=busybox</code> sets the image that the single container in the pod will use. All we need is a way to make HTTP requests from the pod, so we will use the <code>busybox</code> image, which contains a variant of <code>wget</code>.</li>
+<li>
+<code>--restart Never</code> prevents that Kubernetes restarts the pod after termination.<a href="#fn:restart-never"><sup id="fnref:restart-never">7</sup></a>
+</li>
+<li>
+<code>my-test-pod</code> is the name of the pod. This can be any name that is not taken yet in the namespace. Note that we don't use a namespace argument here, so our pod will be created in the <code>default</code> namespace.</li>
+</ul>
+<p>Using pod IPs to access our application has a number of downsides though. This post is already a bit long though, so we will discuss them and look at the solutions that Kubernetes provides for this issue, namely, services and ingresses, in the next post.</p>
+<h3 id="Deleting-the-cluster">Deleting the cluster<a class="anchor-link" href="#Deleting-the-cluster">¶</a>
+</h3>
+<p>For the time being, we are done with our experiments. We could stop the cluster now with <code>k3d cluster stop</code> and restart it later with <code>k3d cluster start</code>. Everything in the cluster is easy to restore though, so we will delete it:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In [22]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-bash"><pre><span></span>k3d cluster delete test-cluster
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-cyan-fg">INFO</span>[0000] Deleting cluster 'test-cluster'              
+<span class="ansi-cyan-fg">INFO</span>[0002] Deleting cluster network 'k3d-test-cluster'  
+<span class="ansi-cyan-fg">INFO</span>[0003] Deleting 2 attached volumes...               
+<span class="ansi-yellow-fg">WARN</span>[0003] Failed to delete volume 'k3d-test-cluster-images' of cluster 'test-cluster': failed to find volume 'k3d-test-cluster-images': Error: No such volume: k3d-test-cluster-images -&gt; Try to delete it manually 
+<span class="ansi-cyan-fg">INFO</span>[0003] Removing cluster details from default kubeconfig... 
+<span class="ansi-cyan-fg">INFO</span>[0003] Removing standalone kubeconfig file (if there is one)... 
+<span class="ansi-cyan-fg">INFO</span>[0003] Successfully deleted cluster test-cluster!   
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Note that all resources are removed despite the warning about the failed deletion of the Docker volume.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Summary">Summary<a class="anchor-link" href="#Summary">¶</a>
+</h3>
+<p>In this post, we created a local single-node Kubernetes cluster with k3d. Moreover, we deployed a small self-made application in the cluster, and connected to this application via HTTP from within the cluster.</p>
+<p>In the next post, we will investigate how to access the application from outside the cluster.</p>
+<hr>
+<ol>
+<li>
+<p><span id="fn:k3d-multiple-nodes">If</span> we wanted more server or worker nodes, we could specify the desired numbers with the <code>--agents</code> and <code>--servers</code> options to <code>k3d cluster create</code>, respectively. <a href="#fnref:k3d-multiple-nodes">↩</a></p>
+</li>
+<li>
+<p><span id="fn:local-image-caveat">There</span> is one thing to keep in mind though: by default, Kubernetes will try to pull the image from a registry even if it is available on the node running the application, and therefore, the application will fail to run. We will see in a minute how this can be prevented by setting a suitable <code>imagePullPolicy</code> for the pods using the image. <a href="#fnref:local-image-caveat">↩</a></p>
+</li>
+<li>
+<p><span id="fn:k8s-resources-command-line">We</span> have already created a Kubernetes resource on the command line with <code>kubectl create</code>: the namespace for our application, which we have created with <code>kubectl create namespace test</code>. We could also have achieved this using a YAML document with the content below: <a href="#fnref:k8s-resources-command-line">↩</a></p>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Namespace</span><span class="w"></span>
+<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
+<span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">test</span><span class="w"></span>
+</pre></div>
+</li>
+<li>
+<p><span id="fn:replicaset">To</span> be precise, the deployment does not control the number of pods directly. It achieves this with a <a href="https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/"><em>replica set</em></a> which is a lower-level object that has controlling the number of pods as its sole purpose. The deployment adds other useful functionality, such as, e.g., updating image versions. <a href="#fnref:replicaset">↩</a></p>
+</li>
+<li>
+<p><span id="fn:statefulset">It</span> is possible to work with stateful applications in Kubernetes though. <a href="https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/"><em>Stateful sets</em></a> cah help with that. <a href="#fnref:statefulset">↩</a></p>
+</li>
+<li>
+<p><span id="fn:apply-deployment-updates">Note</span> that <code>kubectl apply</code> is not only useful for creating deployments and other resources. The same command can be used to make changes to the resource. A common example would be to modify a deployment such that the image version is updated. <a href="#fnref:apply-deployment-updates">↩</a></p>
+</li>
+<li>
+<p><span id="fn:restart-never">Restarting terminated pods is the default behavior because most applications running in Kubernetes clusters are services which should always be up.</span> <a href="#fnref:restart-never">↩</a></p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+    </div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../../../../categories/docker/" rel="tag">docker</a></li>
+            <li><a class="tag p-category" href="../../../../../categories/kubernetes/" rel="tag">kubernetes</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../../../03/01/getting-rid-of-waste-manipulating-calendars-with-python-and-ics/" rel="prev" title="Getting rid of waste: manipulating calendars with Python and the ics library">Previous post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+        
+    
+<div id="comment-section"></div>
+
+
+<div id="respond">
+<form id="comment-form" method="post" class="" action="https://staticman-freininghaus.herokuapp.com/v3/entry/github/freininghaus/freininghaus.github.io/main/comments">
+
+<fieldset id="comments-fieldset">
+<input type="hidden" name="options[origin]" value="posts/2022-07-12-local-k8s-cluster-with-k3d/2022-07-12-part1-setup-k8s-cluster-and-setup-application.ipynb"><input type="hidden" id="comment-replying-to-uid" name="fields[replying-to-id]" value=""><input type="hidden" name="options[title]" value="How to set up a local Kubernetes cluster and deploy a self-made microservice in less than 10 minutes"><div class="form-group mt-4">
+    <label for="comment-form-message"><h3>Add Comment</h3></label>
+    <textarea class="form-control" name="fields[message]" type="text" id="comment-form-message" placeholder="Your comment (markdown accepted)" required rows="6"></textarea>
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-name">Name</label>
+    <input class="form-control" name="fields[author]" type="text" id="comment-form-name" placeholder="Your name (required)" required>
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-email">E-mail</label>
+    <input class="form-control" name="fields[email]" type="email" id="comment-form-email" placeholder="Your email (optional)">
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-email">Website</label>
+    <input class="form-control" name="fields[url]" type="url" id="comment-form-url" placeholder="Link to your website (optional)">
+</div>
+
+  <div class="form-group" style="display:none;">
+    <label for="hp">Hp</label>
+    <input class="form-control" name="fields[hp]" id="hp" type="text" placeholder="Leave blank">
+</div>
+
+
+  <button class="btn btn-primary" id="comment-form-submit">
+    Submit comment
+  </button>
+
+</fieldset>
+</form>
+</div>
+
+<div class="modal" id="comments-modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="comments-modal-title"></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="comments-modal-text"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- script for moving the comment form next to a comment for replies -->
+<script src="../../../../../assets/js/staticman_comments.js"></script><!-- icon for the button while comment submission is in progress --><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><symbol id="icon-loading" viewbox="149.8 37.8 499.818 525"><path d="M557.8 187.8c13.8 0 24.601-10.8 24.601-24.6S571.6 138.6 557.8 138.6s-24.6 10.8-24.6 24.6c0 13.2 10.8 24.6 24.6 24.6zm61.2 90.6c-16.8 0-30.6 13.8-30.6 30.6s13.8 30.6 30.6 30.6 30.6-13.8 30.6-30.6c.6-16.8-13.2-30.6-30.6-30.6zm-61.2 145.2c-20.399 0-36.6 16.2-36.6 36.601 0 20.399 16.2 36.6 36.6 36.6 20.4 0 36.601-16.2 36.601-36.6C595 439.8 578.2 423.6 557.8 423.6zM409 476.4c-24 0-43.2 19.199-43.2 43.199s19.2 43.2 43.2 43.2 43.2-19.2 43.2-43.2S433 476.4 409 476.4zM260.8 411c-27 0-49.2 22.2-49.2 49.2s22.2 49.2 49.2 49.2 49.2-22.2 49.2-49.2-22.2-49.2-49.2-49.2zm-10.2-102c0-27.6-22.8-50.4-50.4-50.4-27.6 0-50.4 22.8-50.4 50.4 0 27.6 22.8 50.4 50.4 50.4 27.6 0 50.4-22.2 50.4-50.4zm10.2-199.8c-30 0-54 24-54 54s24 54 54 54 54-24 54-54-24.6-54-54-54zM409 37.8c-35.4 0-63.6 28.8-63.6 63.6S374.2 165 409 165s63.6-28.8 63.6-63.6-28.2-63.6-63.6-63.6z"></path></symbol></svg></section><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" integrity="sha384-3lJUsx1TJHt7BA4udB5KPnDrlkO8T6J6v/op7ui0BbCjvZ9WqV4Xm6DTP6kQ/iBH" crossorigin="anonymous"></script><script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$latex ','$'], ['\\(','\\)']]}});
+        </script></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+            
+        </footer>
+</div>
+</div>
+
+
+            <script src="../../../../../assets/js/jquery.min.js"></script><script src="../../../../../assets/js/popper.min.js"></script><script src="../../../../../assets/js/bootstrap.min.js"></script><script src="../../../../../assets/js/baguetteBox.min.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

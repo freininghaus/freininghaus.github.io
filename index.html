@@ -18,7 +18,7 @@
 <meta name="generator" content="Nikola (getnikola.com)">
 <link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="rss.xml">
 <link rel="canonical" href="https://freininghaus.github.io/">
-<!--[if lt IE 9]><script src="assets/js/html5.js"></script><![endif]--><link rel="prefetch" href="blog/2022/03/01/getting-rid-of-waste-manipulating-calendars-with-python-and-ics/" type="text/html">
+<!--[if lt IE 9]><script src="assets/js/html5.js"></script><![endif]--><link rel="prefetch" href="blog/2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/" type="text/html">
 </head>
 <body>
 <a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
@@ -76,7 +76,41 @@ bg-dark
 
     
 <div class="postindex">
-    <article class="h-entry post-text" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title"><a href="blog/2022/03/01/getting-rid-of-waste-manipulating-calendars-with-python-and-ics/" class="u-url">Getting rid of waste: manipulating calendars with Python and the ics library</a></h1>
+    <article class="h-entry post-text" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title"><a href="blog/2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/" class="u-url">How to set up a local Kubernetes cluster and deploy a self-made microservice in less than 10 minutes</a></h1>
+        <div class="metadata">
+            <p class="byline author vcard"><span class="byline-name fn" itemprop="author">
+                Frank Reininghaus
+            </span></p>
+            <p class="dateline">
+            <a href="blog/2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/" rel="bookmark">
+            <time class="published dt-published" datetime="2022-07-12T20:01:51Z" itemprop="datePublished" title="2022-07-12">2022-07-12</time></a>
+            </p>
+                <p class="commentline">
+    
+<a href="blog/2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/#comment-section">Comments</a>
+
+
+        </p>
+</div>
+    </header><div class="p-summary entry-summary">
+    <div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Nowadays, many server applications are not installed and run directly on physical hosts or virtual machines any more. Instead, application code is often built into container images, and run in so-called <em>pods</em> in a Kubernetes cluster. Kubernetes provides a standardized way to orchestrate applications and works the same way no matter where the cluster is running.</p>
+<p>Kubernetes clusters are often hosted and managed by cloud providers. They can also be deployed on-premise though, and either be created and managed by a service provider, or with tools like <a href="https://github.com/kubernetes-sigs/kubespray">Kubespray</a>. Most clusters are long-lived, and consist of multiple nodes for redundancy.</p>
+<p>However, sometimes a cluster that can be created and discarded quickly and easily on a single computer can be very useful:</p>
+<ul>
+<li>A developer might want to create a cluster on their development machine for playing around with Kubernetes, exploring the newest tools, or testing their newly developed code and Kubernetes resources. If they used a cluster that is shared with others or even with production workloads instead, they might get into the way of others, or worse, break things that should better not break.</li>
+<li>Another use case is automated testing of application deployments in Kubernetes, or testing of applications that interact with Kubernetes resources themselves. This works best in a dedicated cluster that is set up in a clean state just for this purpose, and thrown away after the tests.</li>
+</ul>
+<p class="more"><a href="blog/2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/">Read more…</a></p>
+</div>
+</div>
+</div>
+    </div>
+    </article><article class="h-entry post-text" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title"><a href="blog/2022/03/01/getting-rid-of-waste-manipulating-calendars-with-python-and-ics/" class="u-url">Getting rid of waste: manipulating calendars with Python and the ics library</a></h1>
         <div class="metadata">
             <p class="byline author vcard"><span class="byline-name fn" itemprop="author">
                 Frank Reininghaus
