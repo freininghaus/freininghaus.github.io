@@ -148,7 +148,7 @@ You can also download the <a href="index.ipynb">Jupyter notebook</a> that this p
 <div class="prompt input_prompt">In [1]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>curl -sLS https://get.arkade.dev <span class="p">|</span> sh
+<div class=" highlight hl-bash"><pre><span></span>curl<span class="w"> </span>-sLS<span class="w"> </span>https://get.arkade.dev<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh
 </pre></div>
 
     </div>
@@ -201,7 +201,7 @@ Download complete.
 <div class="prompt input_prompt">In [2]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>./arkade get kubectl k3d jq &gt; /dev/null
+<div class=" highlight hl-bash"><pre><span></span>./arkade<span class="w"> </span>get<span class="w"> </span>kubectl<span class="w"> </span>k3d<span class="w"> </span>jq<span class="w"> </span>&gt;<span class="w"> </span>/dev/null
 </pre></div>
 
     </div>
@@ -255,7 +255,7 @@ Download complete.
 <div class="prompt input_prompt">In [3]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span><span class="nb">export</span> <span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:<span class="nv">$HOME</span>/.arkade/bin/
+<div class=" highlight hl-bash"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:<span class="nv">$HOME</span>/.arkade/bin/
 </pre></div>
 
     </div>
@@ -288,7 +288,7 @@ Download complete.
 <div class="prompt input_prompt">In [4]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>k3d cluster create test-cluster -p <span class="s2">"80:80@loadbalancer"</span>
+<div class=" highlight hl-bash"><pre><span></span>k3d<span class="w"> </span>cluster<span class="w"> </span>create<span class="w"> </span>test-cluster<span class="w"> </span>-p<span class="w"> </span><span class="s2">"80:80@loadbalancer"</span>
 </pre></div>
 
     </div>
@@ -348,7 +348,7 @@ kubectl cluster-info
 <div class="prompt input_prompt">In [5]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>kubectl cluster-info
+<div class=" highlight hl-bash"><pre><span></span>kubectl<span class="w"> </span>cluster-info
 </pre></div>
 
     </div>
@@ -393,7 +393,7 @@ To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
 <div class="prompt input_prompt">In [6]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>kubectl get nodes
+<div class=" highlight hl-bash"><pre><span></span>kubectl<span class="w"> </span>get<span class="w"> </span>nodes
 </pre></div>
 
     </div>
@@ -435,7 +435,7 @@ k3d-test-cluster-server-0   NotReady   control-plane,master   6s    v1.23.8+k3s1
 <div class="prompt input_prompt">In [7]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>kubectl <span class="nb">wait</span> --for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>ready node k3d-test-cluster-server-0
+<div class=" highlight hl-bash"><pre><span></span>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>ready<span class="w"> </span>node<span class="w"> </span>k3d-test-cluster-server-0
 </pre></div>
 
     </div>
@@ -466,7 +466,7 @@ k3d-test-cluster-server-0   NotReady   control-plane,master   6s    v1.23.8+k3s1
 <div class="prompt input_prompt">In [8]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>kubectl get nodes
+<div class=" highlight hl-bash"><pre><span></span>kubectl<span class="w"> </span>get<span class="w"> </span>nodes
 </pre></div>
 
     </div>
@@ -512,9 +512,9 @@ k3d-test-cluster-server-0   Ready    control-plane,master   9s    v1.23.8+k3s1
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-bash"><pre><span></span><span class="c1"># I like to use https://pygments.org/ for syntax highlighting</span>
-<span class="nb">alias</span> <span class="nv">cat</span><span class="o">=</span>pygmentize
+<span class="nb">alias</span><span class="w"> </span><span class="nv">cat</span><span class="o">=</span>pygmentize
 
-cat hello-server/hello-app.py
+cat<span class="w"> </span>hello-server/hello-app.py
 </pre></div>
 
     </div>
@@ -572,7 +572,7 @@ app <span style="color: rgb(98,98,98)">=</span> fastapi<span style="color: rgb(9
 <div class="prompt input_prompt">In [10]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>cat hello-server/Dockerfile
+<div class=" highlight hl-bash"><pre><span></span>cat<span class="w"> </span>hello-server/Dockerfile
 </pre></div>
 
     </div>
@@ -609,7 +609,7 @@ app <span style="color: rgb(98,98,98)">=</span> fastapi<span style="color: rgb(9
 <div class="prompt input_prompt">In [11]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>docker build hello-server/ -t my-hello-server
+<div class=" highlight hl-bash"><pre><span></span>docker<span class="w"> </span>build<span class="w"> </span>hello-server/<span class="w"> </span>-t<span class="w"> </span>my-hello-server
 </pre></div>
 
     </div>
@@ -672,7 +672,7 @@ Successfully tagged my-hello-server:latest
 <div class="prompt input_prompt">In [12]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>k3d image import my-hello-server --cluster test-cluster
+<div class=" highlight hl-bash"><pre><span></span>k3d<span class="w"> </span>image<span class="w"> </span>import<span class="w"> </span>my-hello-server<span class="w"> </span>--cluster<span class="w"> </span>test-cluster
 </pre></div>
 
     </div>
@@ -732,7 +732,7 @@ Successfully tagged my-hello-server:latest
 <div class="prompt input_prompt">In [13]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>kubectl create namespace <span class="nb">test</span>
+<div class=" highlight hl-bash"><pre><span></span>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span><span class="nb">test</span>
 </pre></div>
 
     </div>
@@ -801,7 +801,7 @@ Successfully tagged my-hello-server:latest
 <div class="prompt input_prompt">In [14]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>cat k8s-resources/pod.yaml
+<div class=" highlight hl-bash"><pre><span></span>cat<span class="w"> </span>k8s-resources/pod.yaml
 </pre></div>
 
     </div>
@@ -889,7 +889,7 @@ Successfully tagged my-hello-server:latest
 <div class="prompt input_prompt">In [15]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>cat k8s-resources/deployment.yaml
+<div class=" highlight hl-bash"><pre><span></span>cat<span class="w"> </span>k8s-resources/deployment.yaml
 </pre></div>
 
     </div>
@@ -957,7 +957,7 @@ Successfully tagged my-hello-server:latest
 <div class="prompt input_prompt">In [16]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>kubectl apply -f k8s-resources/deployment.yaml
+<div class=" highlight hl-bash"><pre><span></span>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>k8s-resources/deployment.yaml
 </pre></div>
 
     </div>
@@ -998,7 +998,7 @@ Successfully tagged my-hello-server:latest
 <div class="prompt input_prompt">In [17]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>kubectl -n <span class="nb">test</span> get pod -o wide
+<div class=" highlight hl-bash"><pre><span></span>kubectl<span class="w"> </span>-n<span class="w"> </span><span class="nb">test</span><span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-o<span class="w"> </span>wide
 </pre></div>
 
     </div>
@@ -1043,7 +1043,7 @@ hello-6ddc49b4d4-dlm7w   0/1     ContainerCreating   0          0s    &lt;none&g
 <div class="prompt input_prompt">In [18]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>kubectl -n <span class="nb">test</span> rollout status deployment/hello
+<div class=" highlight hl-bash"><pre><span></span>kubectl<span class="w"> </span>-n<span class="w"> </span><span class="nb">test</span><span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deployment/hello
 </pre></div>
 
     </div>
@@ -1087,7 +1087,7 @@ deployment "hello" successfully rolled out
 <div class="prompt input_prompt">In [19]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>kubectl -n <span class="nb">test</span> get pod -o wide
+<div class=" highlight hl-bash"><pre><span></span>kubectl<span class="w"> </span>-n<span class="w"> </span><span class="nb">test</span><span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-o<span class="w"> </span>wide
 </pre></div>
 
     </div>
@@ -1142,8 +1142,8 @@ hello-6ddc49b4d4-dlm7w   1/1     Running   0          3s    10.42.0.10   k3d-tes
 <div class="prompt input_prompt">In [20]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span><span class="nv">first_pod_ip</span><span class="o">=</span><span class="k">$(</span>kubectl -n <span class="nb">test</span> get pods -o <span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.items[0].status.podIPs[].ip}'</span><span class="k">)</span>
-<span class="nb">echo</span> <span class="nv">$first_pod_ip</span>
+<div class=" highlight hl-bash"><pre><span></span><span class="nv">first_pod_ip</span><span class="o">=</span><span class="k">$(</span>kubectl<span class="w"> </span>-n<span class="w"> </span><span class="nb">test</span><span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.items[0].status.podIPs[].ip}'</span><span class="k">)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="nv">$first_pod_ip</span>
 </pre></div>
 
     </div>
@@ -1184,7 +1184,7 @@ hello-6ddc49b4d4-dlm7w   1/1     Running   0          3s    10.42.0.10   k3d-tes
 <div class="prompt input_prompt">In [21]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>kubectl run --rm --attach -q --image<span class="o">=</span>busybox --restart Never my-test-pod -- wget <span class="nv">$first_pod_ip</span>:8000/greet/Frank -q -O - <span class="p">|</span> jq .
+<div class=" highlight hl-bash"><pre><span></span>kubectl<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--attach<span class="w"> </span>-q<span class="w"> </span>--image<span class="o">=</span>busybox<span class="w"> </span>--restart<span class="w"> </span>Never<span class="w"> </span>my-test-pod<span class="w"> </span>--<span class="w"> </span>wget<span class="w"> </span><span class="nv">$first_pod_ip</span>:8000/greet/Frank<span class="w"> </span>-q<span class="w"> </span>-O<span class="w"> </span>-<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
 </pre></div>
 
     </div>
@@ -1239,7 +1239,7 @@ hello-6ddc49b4d4-dlm7w   1/1     Running   0          3s    10.42.0.10   k3d-tes
 <li>
 <code>my-test-pod</code> is the name of the pod. This can be any name that is not taken yet in the namespace. Note that we don't use a namespace argument here, so our pod will be created in the <code>default</code> namespace.</li>
 </ul>
-<p>Using pod IPs to access our application has a number of downsides though. This post is already a bit long though, so we will discuss them and look at the solutions that Kubernetes provides for this issue, namely, services and ingresses, in the next post.</p>
+<p>Using pod IPs to access our application has a number of downsides though. This post is already a bit long though, so we will discuss them and look at the solutions that Kubernetes provides for this issue, namely, services and ingresses, in a future post.</p>
 <h3 id="Deleting-the-cluster">Deleting the cluster<a class="anchor-link" href="#Deleting-the-cluster">¶</a>
 </h3>
 <p>For the time being, we are done with our experiments. We could stop the cluster now with <code>k3d cluster stop</code> and restart it later with <code>k3d cluster start</code>. Everything in the cluster is easy to restore though, so we will delete it:</p>
@@ -1252,7 +1252,7 @@ hello-6ddc49b4d4-dlm7w   1/1     Running   0          3s    10.42.0.10   k3d-tes
 <div class="prompt input_prompt">In [22]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-bash"><pre><span></span>k3d cluster delete test-cluster
+<div class=" highlight hl-bash"><pre><span></span>k3d<span class="w"> </span>cluster<span class="w"> </span>delete<span class="w"> </span>test-cluster
 </pre></div>
 
     </div>
@@ -1313,12 +1313,14 @@ hello-6ddc49b4d4-dlm7w   1/1     Running   0          3s    10.42.0.10   k3d-tes
 </li>
 <li>
 <p><span id="fn:k8s-resources-command-line">We</span> have already created a Kubernetes resource on the command line with <code>kubectl create</code>: the namespace for our application, which we have created with <code>kubectl create namespace test</code>. We could also have achieved this using a YAML document with the content below: <a href="#fnref:k8s-resources-command-line">↩</a></p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
-<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Namespace</span><span class="w"></span>
-<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
-<span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">test</span><span class="w"></span>
-</pre></div>
 </li>
+</ol>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Namespace</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">test</span>
+</pre></div>
+<ol start="4">
 <li>
 <p><span id="fn:replicaset">To</span> be precise, the deployment does not control the number of pods directly. It achieves this with a <a href="https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/"><em>replica set</em></a> which is a lower-level object that has controlling the number of pods as its sole purpose. The deployment adds other useful functionality, such as, e.g., updating image versions. <a href="#fnref:replicaset">↩</a></p>
 </li>
@@ -1411,7 +1413,7 @@ hello-6ddc49b4d4-dlm7w   1/1     Running   0          3s    10.42.0.10   k3d-tes
 <script src="../../../../../assets/js/staticman_comments.js"></script><!-- icon for the button while comment submission is in progress --><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><symbol id="icon-loading" viewbox="149.8 37.8 499.818 525"><path d="M557.8 187.8c13.8 0 24.601-10.8 24.601-24.6S571.6 138.6 557.8 138.6s-24.6 10.8-24.6 24.6c0 13.2 10.8 24.6 24.6 24.6zm61.2 90.6c-16.8 0-30.6 13.8-30.6 30.6s13.8 30.6 30.6 30.6 30.6-13.8 30.6-30.6c.6-16.8-13.2-30.6-30.6-30.6zm-61.2 145.2c-20.399 0-36.6 16.2-36.6 36.601 0 20.399 16.2 36.6 36.6 36.6 20.4 0 36.601-16.2 36.601-36.6C595 439.8 578.2 423.6 557.8 423.6zM409 476.4c-24 0-43.2 19.199-43.2 43.199s19.2 43.2 43.2 43.2 43.2-19.2 43.2-43.2S433 476.4 409 476.4zM260.8 411c-27 0-49.2 22.2-49.2 49.2s22.2 49.2 49.2 49.2 49.2-22.2 49.2-49.2-22.2-49.2-49.2-49.2zm-10.2-102c0-27.6-22.8-50.4-50.4-50.4-27.6 0-50.4 22.8-50.4 50.4 0 27.6 22.8 50.4 50.4 50.4 27.6 0 50.4-22.2 50.4-50.4zm10.2-199.8c-30 0-54 24-54 54s24 54 54 54 54-24 54-54-24.6-54-54-54zM409 37.8c-35.4 0-63.6 28.8-63.6 63.6S374.2 165 409 165s63.6-28.8 63.6-63.6-28.2-63.6-63.6-63.6z"></path></symbol></svg></section><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" integrity="sha384-3lJUsx1TJHt7BA4udB5KPnDrlkO8T6J6v/op7ui0BbCjvZ9WqV4Xm6DTP6kQ/iBH" crossorigin="anonymous"></script><script type="text/x-mathjax-config">
         MathJax.Hub.Config({tex2jax: {inlineMath: [['$latex ','$'], ['\\(','\\)']]}});
         </script></article><!--End of body content--><footer id="footer">
-            Contents © 2022         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            Contents © 2023         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
             
             
         </footer>

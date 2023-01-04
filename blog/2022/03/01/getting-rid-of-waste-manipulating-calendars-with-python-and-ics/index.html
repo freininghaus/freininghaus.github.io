@@ -25,10 +25,10 @@
 <meta property="og:url" content="https://freininghaus.github.io/blog/2022/03/01/getting-rid-of-waste-manipulating-calendars-with-python-and-ics/">
 <meta property="og:description" content='In the city where I live, four different kinds of waste are collected regularly:
 
-paper, 
+paper,
 organic waste,
 the "yellow bag" which is for all sorts of packaging, and
-residual waste, which contains all th'>
+residual waste, which contains all the'>
 <meta property="og:type" content="article">
 <meta property="article:published_time" content="2022-03-01T22:24:59+01:00">
 <meta property="article:tag" content="python">
@@ -121,7 +121,7 @@ bg-dark
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>In the city where I live, four different kinds of waste are collected regularly:</p>
 <ul>
-<li>paper, </li>
+<li>paper,</li>
 <li>organic waste,</li>
 <li>the "yellow bag" which is for all sorts of packaging, and</li>
 <li>residual waste, which contains all the rest (except batteries, dangerous chemicals and a couple of other things, which people have to bring to collection facilities themselves).</li>
@@ -129,6 +129,7 @@ bg-dark
 <p>At first sight, the days on which I have to take out the different bins and bags seem easy enough to remember: usually, everything is collected on the same day of the week. However, there are different schedules for the different kinds of waste (biweekly or every four weeks in my part of the city). Moreover, in weeks with bank holidays, the collection is often shifted to another weekday.</p>
 <p>Fortunately, the city council provides <a href="https://en.wikipedia.org/wiki/ICalendar">iCalendar</a> files (<code>*.ical</code>) with all waste collection dates for the current year <a href="https://serviceportal.aachen.de/abfallnavi">at its website</a>. The downloaded file can easily be imported into any calendar application. I found that the structure of the events in the file could be made more convenient though.</p>
 <!-- TEASER_END -->
+
 </div>
 </div>
 </div>
@@ -155,7 +156,7 @@ bg-dark
 <div class="prompt input_prompt">In [1]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>sed -e <span class="s1">'/END:VEVENT/q'</span> -e <span class="s1">'s/^\(LOCATION:\).*$/\1&lt;my address&gt;/'</span> calendar.ics
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>sed<span class="w"> </span>-e<span class="w"> </span><span class="s1">'/END:VEVENT/q'</span><span class="w"> </span>-e<span class="w"> </span><span class="s1">'s/^\(LOCATION:\).*$/\1&lt;my address&gt;/'</span><span class="w"> </span>calendar.ics
 </pre></div>
 
     </div>
@@ -418,7 +419,7 @@ END:VEVENT
 <span class="k">def</span> <span class="nf">merge_simultaneous_events</span><span class="p">(</span><span class="n">events</span><span class="p">):</span>
     <span class="n">begin_and_end</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">event</span><span class="p">:</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">begin</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">end</span><span class="p">)</span>
     
-    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">events</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">calendar</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> 
+    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">events</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> 
                                               <span class="n">key</span><span class="o">=</span><span class="n">begin_and_end</span><span class="p">),</span> 
                                        <span class="n">key</span><span class="o">=</span><span class="n">begin_and_end</span><span class="p">):</span>
         <span class="c1"># We can consume 'events' only once, but we need it twice.</span>
@@ -433,7 +434,7 @@ END:VEVENT
 
         <span class="k">yield</span> <span class="n">merged_event</span>
 
-<span class="n">merged_events</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">merge_simultaneous_events</span><span class="p">(</span><span class="n">events</span><span class="p">))</span>
+<span class="n">merged_events</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">merge_simultaneous_events</span><span class="p">(</span><span class="n">calendar</span><span class="o">.</span><span class="n">events</span><span class="p">))</span>
 </pre></div>
 
     </div>
@@ -637,7 +638,7 @@ END:VEVENT
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>It can be serialized easily to a file because a <code>Calendar</code> object will happily behave like an iterable of strings that produces the file contents line by line:</p>
+<p>It can be serialized easily to a file like this:<a href="#fn:ics-serialization"><sup id="fnref:ics-serialization">1</sup></a></p>
 
 </div>
 </div>
@@ -648,7 +649,7 @@ END:VEVENT
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"new-calendar.ics"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">f</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">new_calendar</span><span class="p">)</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">new_calendar</span><span class="o">.</span><span class="n">serialize</span><span class="p">())</span>
 </pre></div>
 
     </div>
@@ -672,9 +673,9 @@ END:VEVENT
 <div class="prompt input_prompt">In [12]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>dos2unix new-calendar.ics <span class="m">2</span>&gt;/dev/null <span class="o">||</span> <span class="nb">echo</span> <span class="s2">"dos2unix failed!"</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>dos2unix<span class="w"> </span>new-calendar.ics<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"dos2unix failed!"</span>
 
-<span class="o">!</span>sed -e <span class="s1">'/END:VEVENT/q'</span> -e <span class="s1">'s/^\(LOCATION:\).*$/\1&lt;my address&gt;/'</span> new-calendar.ics
+<span class="o">!</span>sed<span class="w"> </span>-e<span class="w"> </span><span class="s1">'/END:VEVENT/q'</span><span class="w"> </span>-e<span class="w"> </span><span class="s1">'s/^\(LOCATION:\).*$/\1&lt;my address&gt;/'</span><span class="w"> </span>new-calendar.ics
 </pre></div>
 
     </div>
@@ -735,10 +736,15 @@ END:VEVENT
 </h2>
 <p>Perhaps surprisingly, taking out the waste can teach you things about programming.</p>
 <p>If you ever want to perform changes on iCalendar files and enjoy coding in Python as much as I do, I recommend that you give <a href="https://pypi.org/project/ics/">ics</a> a try. It's just a</p>
-<div class="highlight"><pre><span></span>pip install ics
+<div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>ics
 </pre></div>
 <p>away and is documented nicely at <a href="https://icspy.readthedocs.io/en/stable/index.html">https://icspy.readthedocs.io/en/stable/index.html</a>.</p>
-
+<hr>
+<ol>
+<li>
+<span id="fn:ics-serialization">The</span> first version of this post serialized the new calendar with <code>f.writelines(new_calendar)</code> because a <code>Calendar</code> object happily behaved like an iterable of strings that produces the file contents line by line. However, as of today (January 4, 2023), this results in a deprecation warning. In future versions of ics, this will not work any more. Moreover, even if the <code>serialize()</code> function is used, there is still an unnecessary deprecation warning with ics 0.7.2. This has been <a href="https://github.com/ics-py/ics-py/pull/361">fixed already</a>, but version 0.7.2 does not contain the fix yet. Until a new version is released, a branch version without this issue can be installed with <code>pip install git+https://github.com/ics-py/ics-py@version-0.7</code>. <a href="#fnref:ics-serialization">↩</a>
+</li>
+</ol>
 </div>
 </div>
 </div>
@@ -820,7 +826,7 @@ END:VEVENT
 <script src="../../../../../assets/js/staticman_comments.js"></script><!-- icon for the button while comment submission is in progress --><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><symbol id="icon-loading" viewbox="149.8 37.8 499.818 525"><path d="M557.8 187.8c13.8 0 24.601-10.8 24.601-24.6S571.6 138.6 557.8 138.6s-24.6 10.8-24.6 24.6c0 13.2 10.8 24.6 24.6 24.6zm61.2 90.6c-16.8 0-30.6 13.8-30.6 30.6s13.8 30.6 30.6 30.6 30.6-13.8 30.6-30.6c.6-16.8-13.2-30.6-30.6-30.6zm-61.2 145.2c-20.399 0-36.6 16.2-36.6 36.601 0 20.399 16.2 36.6 36.6 36.6 20.4 0 36.601-16.2 36.601-36.6C595 439.8 578.2 423.6 557.8 423.6zM409 476.4c-24 0-43.2 19.199-43.2 43.199s19.2 43.2 43.2 43.2 43.2-19.2 43.2-43.2S433 476.4 409 476.4zM260.8 411c-27 0-49.2 22.2-49.2 49.2s22.2 49.2 49.2 49.2 49.2-22.2 49.2-49.2-22.2-49.2-49.2-49.2zm-10.2-102c0-27.6-22.8-50.4-50.4-50.4-27.6 0-50.4 22.8-50.4 50.4 0 27.6 22.8 50.4 50.4 50.4 27.6 0 50.4-22.2 50.4-50.4zm10.2-199.8c-30 0-54 24-54 54s24 54 54 54 54-24 54-54-24.6-54-54-54zM409 37.8c-35.4 0-63.6 28.8-63.6 63.6S374.2 165 409 165s63.6-28.8 63.6-63.6-28.2-63.6-63.6-63.6z"></path></symbol></svg></section><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" integrity="sha384-3lJUsx1TJHt7BA4udB5KPnDrlkO8T6J6v/op7ui0BbCjvZ9WqV4Xm6DTP6kQ/iBH" crossorigin="anonymous"></script><script type="text/x-mathjax-config">
         MathJax.Hub.Config({tex2jax: {inlineMath: [['$latex ','$'], ['\\(','\\)']]}});
         </script></article><!--End of body content--><footer id="footer">
-            Contents © 2022         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            Contents © 2023         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
             
             
         </footer>
