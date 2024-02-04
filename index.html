@@ -18,7 +18,7 @@
 <meta name="generator" content="Nikola (getnikola.com)">
 <link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="rss.xml">
 <link rel="canonical" href="https://freininghaus.github.io/">
-<!--[if lt IE 9]><script src="assets/js/html5.js"></script><![endif]--><link rel="prefetch" href="blog/2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/" type="text/html">
+<!--[if lt IE 9]><script src="assets/js/html5.js"></script><![endif]--><link rel="prefetch" href="blog/2024/02/04/brainfuck-interpreter-in-rust-part1/" type="text/html">
 </head>
 <body>
 <a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
@@ -76,7 +76,45 @@ bg-dark
 
     
 <div class="postindex">
-    <article class="h-entry post-text" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title"><a href="blog/2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/" class="u-url">How to set up a local Kubernetes cluster and deploy a self-made microservice in less than 10 minutes</a></h1>
+    <article class="h-entry post-text" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title"><a href="blog/2024/02/04/brainfuck-interpreter-in-rust-part1/" class="u-url">Learn Rust by building a Brainfuck interpreter, part 1: implement the tape and model the program as an abstract syntax tree</a></h1>
+        <div class="metadata">
+            <p class="byline author vcard"><span class="byline-name fn" itemprop="author">
+                Frank Reininghaus
+            </span></p>
+            <p class="dateline">
+            <a href="blog/2024/02/04/brainfuck-interpreter-in-rust-part1/" rel="bookmark">
+            <time class="published dt-published" datetime="2024-02-04T21:23:02Z" itemprop="datePublished" title="2024-02-04">2024-02-04</time></a>
+            </p>
+                <p class="commentline">
+    
+<a href="blog/2024/02/04/brainfuck-interpreter-in-rust-part1/#comment-section">Comments</a>
+
+
+        </p>
+</div>
+    </header><div class="p-summary entry-summary">
+    <div class="cell border-box-sizing text_cell rendered" id="cell-id=26524732-e864-4158-a826-9e0772f14cac">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Motivation">Motivation<a class="anchor-link" href="blog/2024/02/04/brainfuck-interpreter-in-rust-part1/#Motivation">¶</a>
+</h3>
+<p>For many years, C++ used to be my favourite language for performance-critical applications. I find Python much more convenient for many use cases, but I have always enjoyed employing zero-cost abstractions and writing generic code that can be compiled to optimal assembly.</p>
+<p>However, C++ has a number of downsides, such as</p>
+<ul>
+<li>problems that arise from <a href="https://en.cppreference.com/w/c/language/behavior">undefined bahaviour</a> in the code,<a href="blog/2024/02/04/brainfuck-interpreter-in-rust-part1/#fn:undefined-behavior"><sup id="fnref:undefined-behavior">1</sup></a>
+</li>
+<li>all the baggage it carries due to its backwards compatibility with almost all C++ code and much of the C code that has ever been written.
+A consequence is that C++ is more cumbersome and error-prone to use than more modern languages, and that developers are less productive than they could be.</li>
+</ul>
+<p>Rust tries to address these issues and enable excellent performance at the same time, so I decided that I should give it a try a few years ago. I started playing around with it for <a href="https://adventofcode.com/">Advent of Code</a> problems, enjoyed it a lot, and wondered what practice project I could try next.</p>
+<p class="more"><a href="blog/2024/02/04/brainfuck-interpreter-in-rust-part1/">Read more…</a></p>
+</div>
+</div>
+</div>
+    </div>
+    </article><article class="h-entry post-text" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title"><a href="blog/2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/" class="u-url">How to set up a local Kubernetes cluster and deploy a self-made microservice in less than 10 minutes</a></h1>
         <div class="metadata">
             <p class="byline author vcard"><span class="byline-name fn" itemprop="author">
                 Frank Reininghaus
@@ -93,7 +131,7 @@ bg-dark
         </p>
 </div>
     </header><div class="p-summary entry-summary">
-    <div class="cell border-box-sizing text_cell rendered">
+    <div class="cell border-box-sizing text_cell rendered" id="cell-id=c150e8c8-dfba-4a83-8720-aec90058d953">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
@@ -127,7 +165,7 @@ bg-dark
         </p>
 </div>
     </header><div class="p-summary entry-summary">
-    <div class="cell border-box-sizing text_cell rendered">
+    <div class="cell border-box-sizing text_cell rendered" id="cell-id=a0e06963">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
@@ -184,7 +222,7 @@ bg-dark
         <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" integrity="sha384-3lJUsx1TJHt7BA4udB5KPnDrlkO8T6J6v/op7ui0BbCjvZ9WqV4Xm6DTP6kQ/iBH" crossorigin="anonymous"></script><script type="text/x-mathjax-config">
         MathJax.Hub.Config({tex2jax: {inlineMath: [['$latex ','$'], ['\\(','\\)']]}});
         </script><!--End of body content--><footer id="footer">
-            Contents © 2023         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            Contents © 2024         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
             
             
         </footer>

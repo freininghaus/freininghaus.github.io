@@ -114,7 +114,7 @@ bg-dark
         
 
     </header><div class="e-content entry-content" itemprop="articleBody text">
-    <div class="cell border-box-sizing text_cell rendered">
+    <div class="cell border-box-sizing text_cell rendered" id="cell-id=a0e06963">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
@@ -129,11 +129,10 @@ bg-dark
 <p>At first sight, the days on which I have to take out the different bins and bags seem easy enough to remember: usually, everything is collected on the same day of the week. However, there are different schedules for the different kinds of waste (biweekly or every four weeks in my part of the city). Moreover, in weeks with bank holidays, the collection is often shifted to another weekday.</p>
 <p>Fortunately, the city council provides <a href="https://en.wikipedia.org/wiki/ICalendar">iCalendar</a> files (<code>*.ical</code>) with all waste collection dates for the current year <a href="https://serviceportal.aachen.de/abfallnavi">at its website</a>. The downloaded file can easily be imported into any calendar application. I found that the structure of the events in the file could be made more convenient though.</p>
 <!-- TEASER_END -->
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=b226c4d8">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
@@ -151,27 +150,20 @@ bg-dark
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=e92c57d5">
 <div class="input">
 <div class="prompt input_prompt">In [1]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>sed<span class="w"> </span>-e<span class="w"> </span><span class="s1">'/END:VEVENT/q'</span><span class="w"> </span>-e<span class="w"> </span><span class="s1">'s/^\(LOCATION:\).*$/\1&lt;my address&gt;/'</span><span class="w"> </span>calendar.ics
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="o">!</span>sed<span class="w"> </span>-e<span class="w"> </span><span class="s1">'/END:VEVENT/q'</span><span class="w"> </span>-e<span class="w"> </span><span class="s1">'s/^\(LOCATION:\).*$/\1&lt;my address&gt;/'</span><span class="w"> </span>calendar.ics
 </pre></div>
-
-    </div>
 </div>
 </div>
-
+</div>
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
-    <div class="prompt"></div>
-
-
+<div class="prompt"></div>
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>BEGIN:VCALENDAR
 VERSION:2.0
@@ -193,22 +185,19 @@ END:VEVENT
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=de703286">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>In principle, we could write a script that loads and parses the lines, groups them into events, and works with these. But we do not have to reinvent the wheel - there are libraries for this purpose, of course 😉</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=3bbefde6">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
@@ -216,59 +205,46 @@ END:VEVENT
 <h2 id="Loading-the-iCalendar-file-with-Python">Loading the iCalendar file with Python<a class="anchor-link" href="#Loading-the-iCalendar-file-with-Python">¶</a>
 </h2>
 <p>I looked for Python libraries which can read and write iCalendar files and found that <a href="https://pypi.org/project/ics/">ics</a> is easy to work with and more than powerful enough for my needs.</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=80455a04">
 <div class="input">
 <div class="prompt input_prompt">In [2]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">ics</span>
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">ics</span>
 </pre></div>
-
-    </div>
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=cffc3cd3">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Let's open the file and look at the first events in the calendar:</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=1f13f4ad">
 <div class="input">
 <div class="prompt input_prompt">In [3]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"calendar.ics"</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"calendar.ics"</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
     <span class="n">calendar</span> <span class="o">=</span> <span class="n">ics</span><span class="o">.</span><span class="n">Calendar</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
 
 <span class="nb">sorted</span><span class="p">(</span><span class="n">calendar</span><span class="o">.</span><span class="n">events</span><span class="p">)[:</span><span class="mi">10</span><span class="p">]</span>
 </pre></div>
-
-    </div>
 </div>
 </div>
-
+</div>
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
-    <div class="prompt output_prompt">Out[3]:</div>
-
-
-
-
+<div class="prompt output_prompt">Out[3]:</div>
 <div class="output_text output_subarea output_execute_result">
 <pre>[&lt;Event 'Gelber Sack' begin:2022-01-06T05:00:00+00:00 end:2022-01-06T05:00:00+00:00&gt;,
  &lt;Event 'Restabfall 2wö' begin:2022-01-06T05:00:00+00:00 end:2022-01-06T05:00:00+00:00&gt;,
@@ -281,29 +257,25 @@ END:VEVENT
  &lt;Event 'Gelber Sack' begin:2022-02-03T05:00:00+00:00 end:2022-02-03T05:00:00+00:00&gt;,
  &lt;Event 'Bio 2wö' begin:2022-02-03T05:00:00+00:00 end:2022-02-03T05:00:00+00:00&gt;]</pre>
 </div>
-
-</div>
-
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=cc0749a3">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>The structure becomes more obvious if we print the date first in each line and add some grouping:</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=f5fac40b">
 <div class="input">
 <div class="prompt input_prompt">In [4]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">itertools</span>
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">itertools</span>
 
 <span class="n">grouped_by_date</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">calendar</span><span class="o">.</span><span class="n">events</span><span class="p">),</span>
                                     <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">event</span><span class="p">:</span> <span class="n">event</span><span class="o">.</span><span class="n">begin</span><span class="p">)</span>
@@ -316,20 +288,13 @@ END:VEVENT
     <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">begin</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span> <span class="n">event</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 </pre></div>
-
-    </div>
 </div>
 </div>
-
+</div>
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
-    <div class="prompt"></div>
-
-
+<div class="prompt"></div>
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>2022-01-06 Gelber Sack
 2022-01-06 Restabfall 2wö
@@ -346,22 +311,19 @@ END:VEVENT
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=377d2e78">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>As you can see, three different kinds of waste are collected on some dates, and four on others (note that the suffix "2wö" is a shorthand for "2-wöchentlich", or biweekly, and "4wö" means "every four weeks"). I did not like these showing up as different events in my calendar. This makes the calendar more cluttered than it needs to be, especially on days with a number of other events.</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=51b39f25">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
@@ -370,16 +332,15 @@ END:VEVENT
 </h2>
 <p>To fix this, we merge simultaneous events into one. The name of the merged event should contain all kinds of waste that are collected on that day.</p>
 <p>First, let's strip the name suffix that indicates the schedule.</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=a7468774">
 <div class="input">
 <div class="prompt input_prompt">In [5]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">re</span>
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">re</span>
 
 <span class="k">def</span> <span class="nf">strip_suffix</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">match</span> <span class="o">:=</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="s2">"^(.*)( \d*wö)$"</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -392,28 +353,25 @@ END:VEVENT
 <span class="k">assert</span> <span class="n">strip_suffix</span><span class="p">(</span><span class="s2">"Bio 2wö"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"Bio"</span>
 <span class="k">assert</span> <span class="n">strip_suffix</span><span class="p">(</span><span class="s2">"Restabfall 2wö"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"Restabfall"</span>
 </pre></div>
-
-    </div>
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=ab7a19f4">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>We can then write a generator that finds all simultaneous events and yields a merged event:</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=6e127441">
 <div class="input">
 <div class="prompt input_prompt">In [6]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">merge_names</span><span class="p">(</span><span class="n">events</span><span class="p">):</span>
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">merge_names</span><span class="p">(</span><span class="n">events</span><span class="p">):</span>
     <span class="k">return</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">strip_suffix</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span><span class="p">))</span>
 
 <span class="k">def</span> <span class="nf">merge_simultaneous_events</span><span class="p">(</span><span class="n">events</span><span class="p">):</span>
@@ -436,44 +394,34 @@ END:VEVENT
 
 <span class="n">merged_events</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">merge_simultaneous_events</span><span class="p">(</span><span class="n">calendar</span><span class="o">.</span><span class="n">events</span><span class="p">))</span>
 </pre></div>
-
-    </div>
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=bcf03cbf">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Now all collections on the same day are merged nicely:</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=97147d53">
 <div class="input">
 <div class="prompt input_prompt">In [7]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">merged_events</span><span class="p">[:</span><span class="mi">4</span><span class="p">]:</span>
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">merged_events</span><span class="p">[:</span><span class="mi">4</span><span class="p">]:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">begin</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span> <span class="n">event</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 </pre></div>
-
-    </div>
 </div>
 </div>
-
+</div>
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
-    <div class="prompt"></div>
-
-
+<div class="prompt"></div>
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>2022-01-06 Bio, Gelber Sack, Restabfall
 2022-01-20 Altpapier, Bio, Gelber Sack, Restabfall
@@ -482,22 +430,19 @@ END:VEVENT
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=55ef5756">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Are we done yet, or is there more that could be improved?</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=144773b8">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
@@ -507,22 +452,21 @@ END:VEVENT
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=1b2ce1da">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Let's look at the times of events close to the daylight saving time switch:</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=5d607447">
 <div class="input">
 <div class="prompt input_prompt">In [8]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">print_events_in_months</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> <span class="n">months</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">)):</span>
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">print_events_in_months</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> <span class="n">months</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">)):</span>
     <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">dt</span> <span class="o">:=</span> <span class="n">event</span><span class="o">.</span><span class="n">begin</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span><span class="o">.</span><span class="n">month</span> <span class="ow">in</span> <span class="n">months</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
@@ -531,20 +475,13 @@ END:VEVENT
 
 <span class="n">print_events_in_months</span><span class="p">(</span><span class="n">merged_events</span><span class="p">)</span>
 </pre></div>
-
-    </div>
 </div>
 </div>
-
+</div>
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
-    <div class="prompt"></div>
-
-
+<div class="prompt"></div>
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>2022-03-04 05:00:00 Bio, Gelber Sack, Restabfall
 2022-03-17 05:00:00 Altpapier, Bio, Gelber Sack, Restabfall
@@ -554,27 +491,24 @@ END:VEVENT
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=ec3014b7">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>All events have the same start time in UTC, but it would be nice if they had the same start time in local time! Maybe 7 am, because the first waste collections occur around that time.</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=36568c18">
 <div class="input">
 <div class="prompt input_prompt">In [9]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">datetime</span>
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">datetime</span>
 <span class="kn">import</span> <span class="nn">pytz</span>
 
 <span class="n">berlin</span> <span class="o">=</span> <span class="n">pytz</span><span class="o">.</span><span class="n">timezone</span><span class="p">(</span><span class="s2">"Europe/Berlin"</span><span class="p">)</span>
@@ -588,23 +522,20 @@ END:VEVENT
     <span class="n">event</span><span class="o">.</span><span class="n">end</span> <span class="o">=</span> <span class="n">new_dt</span>
     <span class="n">event</span><span class="o">.</span><span class="n">begin</span> <span class="o">=</span> <span class="n">new_dt</span>
 </pre></div>
-
-    </div>
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=8acfbddd">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Note that we modify <code>event.end</code> before <code>event.begin</code>. Otherwise, <code>ics</code> would complain because the new <code>begin</code> date is after the old one, such that <code>begin</code> would be after <code>end</code> temporarily. This issue could be fixed better, but simply swapping the assignments works just fine for my simple task.</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=5d090726">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
@@ -612,85 +543,71 @@ END:VEVENT
 <h2 id="Creating-a-new-file-with-the-merged-events">Creating a new file with the merged events<a class="anchor-link" href="#Creating-a-new-file-with-the-merged-events">¶</a>
 </h2>
 <p>Now we can put the new events into a new Calendar:</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=a4227303">
 <div class="input">
 <div class="prompt input_prompt">In [10]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">new_calendar</span> <span class="o">=</span> <span class="n">ics</span><span class="o">.</span><span class="n">Calendar</span><span class="p">()</span>
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">new_calendar</span> <span class="o">=</span> <span class="n">ics</span><span class="o">.</span><span class="n">Calendar</span><span class="p">()</span>
 
 <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">merged_events</span><span class="p">:</span>
     <span class="n">set_time_7am</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
     <span class="n">new_calendar</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
 </pre></div>
-
-    </div>
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=30683103">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>It can be serialized easily to a file like this:<a href="#fn:ics-serialization"><sup id="fnref:ics-serialization">1</sup></a></p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=f481ac51">
 <div class="input">
 <div class="prompt input_prompt">In [11]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"new-calendar.ics"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"new-calendar.ics"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
     <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">new_calendar</span><span class="o">.</span><span class="n">serialize</span><span class="p">())</span>
 </pre></div>
-
-    </div>
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=8cacef7f">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>We can check now that the first event in the new file looks as it should. Actually, the first event in the file is not the event that occurs first because the events are stored in a <code>set</code> in <code>Calendar</code>. Unlike <code>dict</code>, a Python <code>set</code> does not preserve the insertion order.</p>
 <p>Note that I run <code>dos2unix</code> on the file before processing it further because the Windows line breaks (<code>"\r\n"</code>) created by <code>ics</code> appear to be turned into <code>"\r\n\r"</code> in the cell output. This is not visible in Jupyter, but it confuses the code which converts the Notebook file into a blog post. I couldn't investigate yet what the root cause of this problem is, so I just remove the Windows line breaks.</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing code_cell rendered">
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=1b90e68c">
 <div class="input">
 <div class="prompt input_prompt">In [12]:</div>
 <div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>dos2unix<span class="w"> </span>new-calendar.ics<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"dos2unix failed!"</span>
+<div class="input_area">
+<div class="highlight hl-ipython3"><pre><span></span><span class="o">!</span>dos2unix<span class="w"> </span>new-calendar.ics<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"dos2unix failed!"</span>
 
 <span class="o">!</span>sed<span class="w"> </span>-e<span class="w"> </span><span class="s1">'/END:VEVENT/q'</span><span class="w"> </span>-e<span class="w"> </span><span class="s1">'s/^\(LOCATION:\).*$/\1&lt;my address&gt;/'</span><span class="w"> </span>new-calendar.ics
 </pre></div>
-
-    </div>
 </div>
 </div>
-
+</div>
 <div class="output_wrapper">
 <div class="output">
-
-
 <div class="output_area">
-
-    <div class="prompt"></div>
-
-
+<div class="prompt"></div>
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>BEGIN:VCALENDAR
 VERSION:2.0
@@ -712,22 +629,19 @@ END:VEVENT
 </pre>
 </div>
 </div>
-
 </div>
 </div>
-
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=094dac78">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>You might notice that the value of the <code>DESCRIPTION</code> field of the alarm is still the one from one of the original events. This is also straightforward to fix, but I think that this post is already long enough as it is 🙂</p>
-
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing text_cell rendered">
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=88b43da2">
 <div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
@@ -826,7 +740,7 @@ END:VEVENT
 <script src="../../../../../assets/js/staticman_comments.js"></script><!-- icon for the button while comment submission is in progress --><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><symbol id="icon-loading" viewbox="149.8 37.8 499.818 525"><path d="M557.8 187.8c13.8 0 24.601-10.8 24.601-24.6S571.6 138.6 557.8 138.6s-24.6 10.8-24.6 24.6c0 13.2 10.8 24.6 24.6 24.6zm61.2 90.6c-16.8 0-30.6 13.8-30.6 30.6s13.8 30.6 30.6 30.6 30.6-13.8 30.6-30.6c.6-16.8-13.2-30.6-30.6-30.6zm-61.2 145.2c-20.399 0-36.6 16.2-36.6 36.601 0 20.399 16.2 36.6 36.6 36.6 20.4 0 36.601-16.2 36.601-36.6C595 439.8 578.2 423.6 557.8 423.6zM409 476.4c-24 0-43.2 19.199-43.2 43.199s19.2 43.2 43.2 43.2 43.2-19.2 43.2-43.2S433 476.4 409 476.4zM260.8 411c-27 0-49.2 22.2-49.2 49.2s22.2 49.2 49.2 49.2 49.2-22.2 49.2-49.2-22.2-49.2-49.2-49.2zm-10.2-102c0-27.6-22.8-50.4-50.4-50.4-27.6 0-50.4 22.8-50.4 50.4 0 27.6 22.8 50.4 50.4 50.4 27.6 0 50.4-22.2 50.4-50.4zm10.2-199.8c-30 0-54 24-54 54s24 54 54 54 54-24 54-54-24.6-54-54-54zM409 37.8c-35.4 0-63.6 28.8-63.6 63.6S374.2 165 409 165s63.6-28.8 63.6-63.6-28.2-63.6-63.6-63.6z"></path></symbol></svg></section><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" integrity="sha384-3lJUsx1TJHt7BA4udB5KPnDrlkO8T6J6v/op7ui0BbCjvZ9WqV4Xm6DTP6kQ/iBH" crossorigin="anonymous"></script><script type="text/x-mathjax-config">
         MathJax.Hub.Config({tex2jax: {inlineMath: [['$latex ','$'], ['\\(','\\)']]}});
         </script></article><!--End of body content--><footer id="footer">
-            Contents © 2023         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            Contents © 2024         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
             
             
         </footer>

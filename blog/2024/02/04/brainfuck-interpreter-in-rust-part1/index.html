@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn Rust by building a Brainfuck interpreter, part 1: implement the tape and model the program as an abstract syntax tree | Frank Reininghaus</title>
+<link href="../../../../../assets/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/baguetteBox.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/rst.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/code.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/theme.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/custom.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/ipython.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/nikola_ipython.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../../../../rss.xml">
+<link rel="canonical" href="https://freininghaus.github.io/blog/2024/02/04/brainfuck-interpreter-in-rust-part1/">
+<!--[if lt IE 9]><script src="../../../../../../../../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Frank Reininghaus">
+<link rel="prev" href="../../../../2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/" title="How to set up a local Kubernetes cluster and deploy a self-made microservice in less than 10 minutes" type="text/html">
+<meta property="og:site_name" content="Frank Reininghaus">
+<meta property="og:title" content="Learn Rust by building a Brainfuck interpreter, part 1: implement the ">
+<meta property="og:url" content="https://freininghaus.github.io/blog/2024/02/04/brainfuck-interpreter-in-rust-part1/">
+<meta property="og:description" content="Motivation¶For many years, C++ used to be my favourite language for performance-critical applications. I find Python much more convenient for many use cases, but I have always enjoyed employing zero-c">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2024-02-04T21:23:02Z">
+<meta property="article:tag" content="rust">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../../../../">
+
+            <span id="blog-title">Frank Reininghaus</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../../../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../../../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../../../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+<a href="../../../../../pages/about/" class="nav-link">About</a>
+
+                
+                
+                    
+    
+    </li>
+<li class="nav-item">
+    <a href="index.ipynb" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+        
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Learn Rust by building a Brainfuck interpreter, part 1: implement the tape and model the program as an abstract syntax tree</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Frank Reininghaus
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2024-02-04T21:23:02Z" itemprop="datePublished" title="2024-02-04">2024-02-04</time></a>
+            </p>
+                <p class="commentline">
+    
+<a href="#comment-section">Comments</a>
+
+
+            
+        </p>
+<p class="sourceline"><a href="index.ipynb" class="sourcelink">Source</a></p>
+
+        </div>
+        
+
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <div class="cell border-box-sizing text_cell rendered" id="cell-id=26524732-e864-4158-a826-9e0772f14cac">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Motivation">Motivation<a class="anchor-link" href="#Motivation">¶</a>
+</h3>
+<p>For many years, C++ used to be my favourite language for performance-critical applications. I find Python much more convenient for many use cases, but I have always enjoyed employing zero-cost abstractions and writing generic code that can be compiled to optimal assembly.</p>
+<p>However, C++ has a number of downsides, such as</p>
+<ul>
+<li>problems that arise from <a href="https://en.cppreference.com/w/c/language/behavior">undefined bahaviour</a> in the code,<a href="#fn:undefined-behavior"><sup id="fnref:undefined-behavior">1</sup></a>
+</li>
+<li>all the baggage it carries due to its backwards compatibility with almost all C++ code and much of the C code that has ever been written.
+A consequence is that C++ is more cumbersome and error-prone to use than more modern languages, and that developers are less productive than they could be.</li>
+</ul>
+<p>Rust tries to address these issues and enable excellent performance at the same time, so I decided that I should give it a try a few years ago. I started playing around with it for <a href="https://adventofcode.com/">Advent of Code</a> problems, enjoyed it a lot, and wondered what practice project I could try next.</p>
+<!-- TEASER_END -->
+<p>A non-trivial practive project for any programming language is to implement an interpreter. <a href="https://en.wikipedia.org/wiki/Brainfuck">Brainfuck</a> is the simplest language that I can think of, so a Brainfuck interpreter is what I implemented some time ago. Recently, I've improved it a bit and decided to write down the steps that I took.</p>
+<p>Readers who have some experience with Rust will find this post easier to follow, but it does not assume any prior Rust knowledge. It does not aim to explain every concept in great detail though. If you want to know more, you can find a good introduction in <a href="https://doc.rust-lang.org/book/"><em>The Rust Programming Language</em></a>.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=de08b6aa-8cc8-43f9-9974-a9e740397c3d">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Brainfuck">Brainfuck<a class="anchor-link" href="#Brainfuck">¶</a>
+</h3>
+<p>You can read a lot about Brainfuck in its <a href="https://en.wikipedia.org/wiki/Brainfuck">Wikipedia article</a>. Its most important aspects are:</p>
+<ul>
+<li>
+<p>Brainfuck code operates on memory which is organized as a one-dimensional array of byte cells. I like to call it <em>tape</em> because it resembles the tape of a <a href="https://en.wikipedia.org/wiki/Turing_machine">Turing machine</a>.</p>
+<p>Besides the tape itself, there is a <em>data pointer</em> which points to the current cell.</p>
+</li>
+<li>
+<p>There are eight instructions, which are represented by a single character each.</p>
+<table>
+<thead><tr>
+<th scope="col" style="text-align: center">instruction</th>
+<th scope="col" style="text-align: left">effect</th>
+</tr></thead>
+<tbody>
+<tr>
+<td style="text-align: center">-</td>
+<td style="text-align: left">decrement the byte inside the current cell by one</td>
+</tr>
+<tr>
+<td style="text-align: center">+</td>
+<td style="text-align: left">increment the byte inside the current cell by one</td>
+</tr>
+<tr>
+<td style="text-align: center">&lt;</td>
+<td style="text-align: left">decrement the data pointer by one, such that it points one cell further to the left</td>
+</tr>
+<tr>
+<td style="text-align: center">&gt;</td>
+<td style="text-align: left">increment the data pointer by one, such that it points one cell further to the right</td>
+</tr>
+<tr>
+<td style="text-align: center">.</td>
+<td style="text-align: left">output the byte in the current cell to standard output</td>
+</tr>
+<tr>
+<td style="text-align: center">,</td>
+<td style="text-align: left">read a byte from standard input and store it in the current cell</td>
+</tr>
+<tr>
+<td style="text-align: center">[</td>
+<td style="text-align: left">loop start: if the byte in the current cell is zero, jump to the instruction after the matching ']' instruction, otherwise, go to the next instruction</td>
+</tr>
+<tr>
+<td style="text-align: center">]</td>
+<td style="text-align: left">loop end: if the byte in the current cell is non-zero, jump to the instruction after the matching '[' instruction, otherwise, go to the next instruction</td>
+</tr>
+</tbody>
+</table>
+<p>All other characters are considered comments and are ignored during execution.</p>
+<p>Loops which would correspond to</p>
+<div class="highlight"><pre><span></span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">current_cell_value</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="cm">/* loop body: instructions between [ and ] */</span>
+<span class="p">}</span>
+</pre></div>
+<p>in C-like languages can be built with '<code>[</code>' and '<code>]</code>'.
+A '<code>[</code>' and a '<code>]</code>' instruction match just like parentheses would in an arithmetic expression, so you can build nested loops with these instructions.</p>
+</li>
+<li>
+<p>Brainfuck is Turing complete: it can in principle be used to write programs that perform any computation that you can think of (at least if the tape has infinite size). However, it is not very practical because most programs tend to be very long and convuluted. This makes Brainfuck a <a href="https://en.wikipedia.org/wiki/Turing_tarpit">Turing tarpit</a>.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=1053a425-2e92-4ca7-bd27-1b6a0d1965f1">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="How-you-can-experiment-with-the-code-in-this-post">How you can experiment with the code in this post<a class="anchor-link" href="#How-you-can-experiment-with-the-code-in-this-post">¶</a>
+</h3>
+<p>Like many of my posts, this post is a <a href="https://jupyter.org/">Jupyter</a> notebook, which you can <a href="index.ipynb">download</a>, execute, and modify. You just need Jupyter, <a href="https://rustup.rs/">Rust</a>, and the <a href="https://crates.io/crates/evcxr_jupyter">evcxr_jupyter crate</a>. You can also work with the notebook easily in Binder (it might take a while to start up): <a href="https://mybinder.org/v2/gh/freininghaus/freininghaus.github.io/main?labpath=posts%2F2024-02-04-brainfuck-interpreter-in-rust-part1%2Frust-bf-part1.ipynb"><img alt="Binder" src="https://mybinder.org/badge_logo.svg"></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=9ab0165c-501a-444a-90f3-d9fae592330c">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Modeling-the-tape-in-Rust">Modeling the tape in Rust<a class="anchor-link" href="#Modeling-the-tape-in-Rust">¶</a>
+</h3>
+<p>The original Brainfuck specification uses a finite tape with 30,000 cells. Each cell holds a single byte, which is initialized to zero. Moreover, there is a movable data pointer which points to the leftmost cell initially.</p>
+<p>We could model this with an array with 30,000 bytes:<a href="#fn:integers"><sup id="fnref:integers">2</sup></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=d4f1ff9a-7f1d-4614-b9ed-f0420b6b71bf">
+<div class="input">
+<div class="prompt input_prompt">In [2]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">struct</span> <span class="nc">ArrayTape</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">data</span>: <span class="p">[</span><span class="kt">u8</span><span class="p">;</span><span class="w"> </span><span class="mi">30000</span><span class="p">],</span>
+<span class="w">    </span><span class="n">pos</span>: <span class="kt">usize</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=b5e52448-85d7-4389-935e-c7083996a4c8">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We can create a tape with all cells initialized to zero like this:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=16d8c5f2-5b5e-4c4a-917c-d39c26c24297">
+<div class="input">
+<div class="prompt input_prompt">In [3]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">my_tape</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ArrayTape</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">data</span>: <span class="p">[</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="mi">30000</span><span class="p">],</span><span class="w"> </span><span class="n">pos</span>: <span class="mi">0</span><span class="w"> </span><span class="p">};</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=7f2cfc4e-cd77-4756-8fa1-d8008e889f69">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>It is common to add a method <code>new()</code> to a type, which creates a new instance of this type:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=dbe719ad-1bb0-41c2-a68e-59a7cf62e568">
+<div class="input">
+<div class="prompt input_prompt">In [4]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">impl</span><span class="w"> </span><span class="n">ArrayTape</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span> <span class="nf">new</span><span class="p">()</span><span class="w"> </span>-&gt; <span class="nc">Self</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="bp">Self</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">data</span>: <span class="p">[</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="mi">30000</span><span class="p">],</span>
+<span class="w">            </span><span class="n">pos</span>: <span class="mi">0</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">let</span><span class="w"> </span><span class="n">my_tape_2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ArrayTape</span>::<span class="n">new</span><span class="p">();</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=92c89e98-61fc-4ef6-b800-eee872c8f05d">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Inside the <code>impl ArrayTape { ... }</code> block, <code>Self</code> is synonymous to <code>ArrayTape</code>, so it can be used as the return type of <code>new()</code> (after <code>-&gt;</code>) and inside the function. Note that no <code>return</code> statement is needed: If no <code>return</code> is encountered while executing a function, the final expression, which is not terminated with a semicolon, is returned.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=546ce96b-d4f7-4bc0-9eb8-6f9e73299ca8">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We can make our Brainfuck interpreter more flexible by using a <a href="https://doc.rust-lang.org/std/vec/struct.Vec.html"><code>Vec</code></a>, which is essentially a dynamic resizable array. Then we can handle more than 30,000 cells, and we do not have to allocate space for and initialize cells which we might not need at all during execution: we will just add a new zero at the end whenever the pointer moves off the tape to the right. Initially, we will use just a single cell and initialize the <code>Vec</code> with the <a href="https://doc.rust-lang.org/std/macro.vec.html"><code>vec!</code> macro</a>:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=18e15516-8cf6-48f3-a7a2-528d75f0b32e">
+<div class="input">
+<div class="prompt input_prompt">In [5]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">struct</span> <span class="nc">VecTape</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">data</span>: <span class="nb">Vec</span><span class="o">&lt;</span><span class="kt">u8</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pos</span>: <span class="kt">usize</span>
+<span class="p">}</span>
+
+<span class="k">impl</span><span class="w"> </span><span class="n">VecTape</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span> <span class="nf">new</span><span class="p">()</span><span class="w"> </span>-&gt; <span class="nc">Self</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="bp">Self</span><span class="p">{</span>
+<span class="w">            </span><span class="n">data</span>: <span class="nc">vec</span><span class="o">!</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+<span class="w">            </span><span class="n">pos</span>: <span class="mi">0</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=31868af7-8bcf-4825-9925-0e4b5bd9f828">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>But we will use an even more flexible solution here, namely, a <a href="https://doc.rust-lang.org/std/collections/struct.VecDeque.html"><code>VecDeque</code></a>, which is a double-ended queue that allows efficient addition of items at either end. This enables programs which move the data pointer to the left from the initial position.</p>
+<p>Moreover, we will use the macro <a href="https://doc.rust-lang.org/rust-by-example/hello/print/print_debug.html"><code>#[derive(Debug)]</code></a>, which makes it possible to output the state of a tape easily, as we will see later:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=b5cf80e7-7e35-4f79-8d40-fbe12303fb39">
+<div class="input">
+<div class="prompt input_prompt">In [6]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">use</span><span class="w"> </span><span class="n">std</span>::<span class="n">collections</span>::<span class="n">VecDeque</span><span class="p">;</span>
+
+<span class="cp">#[derive(Debug)]</span>
+<span class="k">struct</span> <span class="nc">Tape</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">data</span>: <span class="nc">VecDeque</span><span class="o">&lt;</span><span class="kt">u8</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pos</span>: <span class="kt">usize</span>
+<span class="p">}</span>
+
+<span class="k">impl</span><span class="w"> </span><span class="n">Tape</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span> <span class="nf">new</span><span class="p">()</span><span class="w"> </span>-&gt; <span class="nc">Self</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="bp">Self</span><span class="p">{</span>
+<span class="w">            </span><span class="n">data</span>: <span class="nc">VecDeque</span>::<span class="n">from</span><span class="p">([</span><span class="mi">0</span><span class="p">]),</span>
+<span class="w">            </span><span class="n">pos</span>: <span class="mi">0</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=c9ac225b-549b-49ad-a967-048a87afc9c4">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now we will implement some functions that operate on a <code>Tape</code> to make working with it convenient. First, we would like to read and write the value of the current cell. Unlike <code>new()</code>, which does not operate on an existing <code>Tape</code> instance (in C++, this would be indicated with the <code>static</code> keyword), the next functions take a tape by reference and by mutable reference, respectively:<a href="#fn:self"><sup id="fnref:self">3</sup></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=0e9f2c16-f388-4300-9cd0-ac71d4bb2060">
+<div class="input">
+<div class="prompt input_prompt">In [7]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">impl</span><span class="w"> </span><span class="n">Tape</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span> <span class="nf">get</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="kt">u8</span> <span class="p">{</span>
+<span class="w">        </span><span class="bp">self</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="p">.</span><span class="n">pos</span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">fn</span> <span class="nf">set</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">value</span>: <span class="kt">u8</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="bp">self</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="p">.</span><span class="n">pos</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=90f15aba-485f-478a-99c6-f1d5a61102de">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We can test that this works as expected. Note how we have to declare the variable as mutable because immutability is the default in Rust:<a href="#fn:cell-final-expression"><sup id="fnref:cell-final-expression">4</sup></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=8b549887-a412-41ec-ae5a-e6d04d85a3e9">
+<div class="input">
+<div class="prompt input_prompt">In [8]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span>::<span class="n">new</span><span class="p">();</span>
+<span class="n">t1</span><span class="p">.</span><span class="n">get</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[8]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>0</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=662d5739-7a8e-4785-9504-1501956be5e6">
+<div class="input">
+<div class="prompt input_prompt">In [9]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">t1</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="mi">5</span><span class="p">);</span>
+<span class="n">t1</span><span class="p">.</span><span class="n">get</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[9]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>5</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=4e3b7ccc-86ba-45fa-8071-073eb12db9ee">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>In a unit test, we would not want to look at the output, but prefer to have the expected results verified automatically. This can be done like this:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=3e07396c-3cb2-4ae4-a299-ef644a2a1163">
+<div class="input">
+<div class="prompt input_prompt">In [10]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span>::<span class="n">new</span><span class="p">();</span>
+<span class="fm">assert_eq!</span><span class="p">(</span><span class="n">t2</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="n">t2</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="mi">17</span><span class="p">);</span>
+<span class="fm">assert_eq!</span><span class="p">(</span><span class="n">t2</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span><span class="w"> </span><span class="mi">17</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=e2490eaa-c048-4fe1-b9ec-b563dfe4028f">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>If such a check fails, the test will panic and output details about which assertion failed and what the expected and actual results were:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=7809a7f3-8adb-4d32-bbbc-a53a26526559">
+<div class="input">
+<div class="prompt input_prompt">In [11]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="fm">assert_eq!</span><span class="p">(</span><span class="n">t2</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>thread '&lt;unnamed&gt;' panicked at 'assertion failed: `(left == right)`
+  left: `17`,
+ right: `1`', src/lib.rs:153:1
+stack backtrace:
+   0: rust_begin_unwind
+             at /rustc/5680fa18feaa87f3ff04063800aec256c3d4b4be/library/std/src/panicking.rs:593:5
+   1: core::panicking::panic_fmt
+             at /rustc/5680fa18feaa87f3ff04063800aec256c3d4b4be/library/core/src/panicking.rs:67:14
+   2: core::panicking::assert_failed_inner
+   3: core::panicking::assert_failed
+   4: run_user_code_10
+   5: evcxr::runtime::Runtime::run_loop
+   6: evcxr::runtime::runtime_hook
+   7: evcxr_jupyter::main
+note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=1cc805a5-fa6e-4266-a007-e3d8bf30d91f">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>So far, we can only read and write the value of the current cell. To model the entire Brainfuck instruction set, we also need functions that move the data pointer:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=fec59776-1c3a-4fc8-8d72-f9d64279650e">
+<div class="input">
+<div class="prompt input_prompt">In [12]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">impl</span><span class="w"> </span><span class="n">Tape</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span> <span class="nf">right</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="bp">self</span><span class="p">.</span><span class="n">pos</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">pos</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">len</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// The data pointer is moving off the tape:</span>
+<span class="w">            </span><span class="c1">// add a new zero-valued cell at the back.</span>
+<span class="w">            </span><span class="bp">self</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="k">fn</span> <span class="nf">left</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">pos</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// We have not reached the leftmost cell yet.</span>
+<span class="w">            </span><span class="c1">// Just move the data pointer to the left.</span>
+<span class="w">            </span><span class="bp">self</span><span class="p">.</span><span class="n">pos</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// If self.pos is 0, the data pointer points to the leftmost cell.</span>
+<span class="w">            </span><span class="c1">// Add a new cell at the front and leave the pointer as it is.</span>
+<span class="w">            </span><span class="bp">self</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">push_front</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=b292d25c-aee3-4039-8011-0b00133269d9">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Let's try it, and then print the state of the tape. This can be done easily because we have used <code>#[derive(Debug)]</code> when defining the <code>Tape</code>:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=7fe63782-b992-4d67-b9c2-9c372cb89458">
+<div class="input">
+<div class="prompt input_prompt">In [13]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span>::<span class="n">new</span><span class="p">();</span>
+
+<span class="n">t3</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+<span class="n">t3</span><span class="p">.</span><span class="n">right</span><span class="p">();</span>
+<span class="n">t3</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span>
+<span class="n">t3</span><span class="p">.</span><span class="n">left</span><span class="p">();</span>
+<span class="n">t3</span><span class="p">.</span><span class="n">left</span><span class="p">();</span>
+<span class="n">t3</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+
+<span class="n">t3</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[13]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>Tape { data: [1, 2, 3], pos: 0 }</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=49f5f9d0-976a-41d1-9e72-9ada30fa7c90">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="How-to-model-Brainfuck-instructions:-Rust-enums-are-more-than-just-named-numbers">How to model Brainfuck instructions: Rust <code>enums</code> are more than just named numbers<a class="anchor-link" href="#How-to-model-Brainfuck-instructions:-Rust-enums-are-more-than-just-named-numbers">¶</a>
+</h3>
+<p>Now that we have a data structure for the tape, it's time to model the instructions. We will use an <code>enum</code> for that.</p>
+<p>It might be tempting to use a definition like this:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=05a0facc-fb97-41a9-aefb-3b51d5cd46b3">
+<div class="input">
+<div class="prompt input_prompt">In [14]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">enum</span> <span class="nc">InstructionFirstTry</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Inc</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Dec</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Left</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Right</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Read</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Write</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LoopStart</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LoopEnd</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=532274fa-bd80-4d4d-8e00-1d3d77705326">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>This looks pretty much like an <code>enum</code> in C/C++, where the values are mostly synonyms for specific integer values.</p>
+<p>However, even though we have not started to implement the parser and the execution engine of the interpreter yet, we can already sense that this definition</p>
+<ul>
+<li>will make parsing easy, because each character in the set <code>+-&lt;&gt;.,[]</code> maps to exactly one instruction, but</li>
+<li>leaves the task of finding matching <code>LoopStart</code> and <code>LoopEnd</code> instructions to the execution engine, which will thus need to be more complex.</li>
+</ul>
+<p>Here we will do it in a different way and parse the source code into an <a href="https://en.wikipedia.org/wiki/Abstract_syntax_tree">abstract syntax tree</a>, which makes execution easy, but requires a bit more work in the parsing step. This design choice is often the more sensible one because</p>
+<ul>
+<li>usually, code is executed a lot more often than it is parsed, so it makes sense to move complex and possibly slow operations like loop delimiter matching to the parsing step,</li>
+<li>matching loop delimiters while parsing ensures that we can reject invalid code immediately, i.e., code where the <code>[</code> and <code>]</code> instructions do not match, and</li>
+<li>we will see later that a lot of the additional parsing complexity can be delegated to powerful libraries, such as <a href="https://docs.rs/nom/latest/nom/"><code>nom</code></a>.</li>
+</ul>
+<p>How can we implement an abstract syntax tree for Brainfuck in Rust?</p>
+<p>It turns out that Rust's <code>enum</code>s can do more than just model integer constants: each <em>variant</em> of the <code>enum</code> can hold additional data, so we can define an instruction <code>Loop</code> that contains a <code>Vec</code> with the instructions in the loop body:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=d4a8baec-87d4-454f-9eed-daaca07a0db4">
+<div class="input">
+<div class="prompt input_prompt">In [15]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="cp">#[derive(Debug)]</span>
+<span class="k">enum</span> <span class="nc">Instruction</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Inc</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Dec</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Left</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Right</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Read</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Write</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">(</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=5ed50ab8-0053-4fdb-b1c9-90d4bd5580a6">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>In fact, Rust's <code>enum</code>s are <a href="https://en.wikipedia.org/wiki/Algebraic_data_type">algebraic data types</a> which were pioneered by functional programming languages like Haskell. In principle, C++ has <a href="https://en.cppreference.com/w/cpp/utility/variant"><code>std::variant</code></a>, which does have similar functionality. However, unlike C++, Haskell and Rust provide pattern matching,<a href="#fn:cpp-variant-pattern-matching"><sup id="fnref:cpp-variant-pattern-matching">5</sup></a> which is a very powerful and convenient way to interact with these data types with very little code, as we will se in the next post in this series.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=ffe8f9d5-bcb1-40f3-bd96-b3a3c6427efd">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>To use an <code>Instruction</code> variant, we have to prefix its name with <code>Instruction::</code>:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=cf3fdcf5-bd89-4971-b6e8-9ba42b47c62d">
+<div class="input">
+<div class="prompt input_prompt">In [16]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">myInstruction</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Instruction</span>::<span class="n">Inc</span><span class="p">;</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=fbc86aa2-1b71-4559-9bd1-a095e8918db6">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Often it is more convenient if we can omit the <code>Instruction::</code> prefix. This can be achieved in this way:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=1fbc248c-56d1-4bec-ad62-9a5f510bb827">
+<div class="input">
+<div class="prompt input_prompt">In [17]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">use</span><span class="w"> </span><span class="n">Instruction</span>::<span class="o">*</span><span class="p">;</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=efca50e0-ceb9-4552-b720-9d70e3b59163">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>This is a valid loop instruction:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=8879d35c-9663-4e43-84c9-f03b880f3b30">
+<div class="input">
+<div class="prompt input_prompt">In [18]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">loopInstruction</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="n">Dec</span><span class="p">,</span><span class="w"> </span><span class="n">Right</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Left</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=30c4f055-95b4-479d-8be9-eb00063ccce5">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>And this is a full Brainfuck program that reads a byte, and then writes all numbers between 1 and the input byte:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=4c9bec31-c8fd-4d16-8da8-d5119b4624b2">
+<div class="input">
+<div class="prompt input_prompt">In [19]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">program</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="fm">vec!</span><span class="p">[</span><span class="n">Right</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Left</span><span class="p">,</span><span class="w"> </span><span class="n">Read</span><span class="p">,</span><span class="w"> </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="n">Right</span><span class="p">,</span><span class="w"> </span><span class="n">Write</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Left</span><span class="p">,</span><span class="w"> </span><span class="n">Dec</span><span class="p">])];</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=f58fefb3-327b-4600-9826-c297b65ea1ce">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Since <code>Instruction</code> implements the <code>Debug</code> trait, we can also print the program easily:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=5be18bbb-70ba-433e-a2b4-87ef4fa134a1">
+<div class="input">
+<div class="prompt input_prompt">In [20]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">program</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[20]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>[Right, Inc, Left, Read, Loop([Right, Write, Inc, Left, Dec])]</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=5d15089f-24c7-4ec9-8df0-070c5080a1b7">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Outside a Jupyter notebook, we would do this with the <code>println!</code> macro:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=5567124b-1f79-440d-9a9d-b4f9876252e3">
+<div class="input">
+<div class="prompt input_prompt">In [21]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="fm">println!</span><span class="p">(</span><span class="s">"{:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">program</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[Right, Inc, Left, Read, Loop([Right, Write, Inc, Left, Dec])]
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=41ae8dda-4a23-468c-abf3-a982a228ef55">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Note that the format specifier '<code>:?</code>' inside the braces tells that the automatically implemented <code>Debug</code> trait shall be used to print the value. The instruction</p>
+<div class="highlight"><pre><span></span><span class="fm">println!</span><span class="p">(</span><span class="s">"{}"</span><span class="p">,</span><span class="w"> </span><span class="n">program</span><span class="p">)</span>
+</pre></div>
+<p>would work only if we implemented the <code>Display</code> trait for <code>Instruction</code>. Then we would have to write some code, but we would be free to choose what a printed instruction should look like.</p>
+<p>There is also a pretty-printing option for types that implement <code>Debug</code>, which makes the tree structure of a Brainfuck program clearer:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=4ca31b81-4b53-4fad-8835-34beeef414b0">
+<div class="input">
+<div class="prompt input_prompt">In [22]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="fm">println!</span><span class="p">(</span><span class="s">"{:#?}"</span><span class="p">,</span><span class="w"> </span><span class="n">program</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[
+    Right,
+    Inc,
+    Left,
+    Read,
+    Loop(
+        [
+            Right,
+            Write,
+            Inc,
+            Left,
+            Dec,
+        ],
+    ),
+]
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=c46d91e8-3425-4a45-b11f-9448030f0076">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Summary-and-outlook">Summary and outlook<a class="anchor-link" href="#Summary-and-outlook">¶</a>
+</h3>
+<p>We have modeled a tape for our Brainfuck interpreter with a <code>struct</code> and implemented the operations that we need. Then we used an <code>enum</code> to model Brainfuck instructions as an abstract syntax tree.</p>
+<p>In the next post in this series, we will use these building blocks to implement an execution engine that applies the instructions to the state of the tape.</p>
+<hr>
+<ol>
+<li>
+<p><span id="fn:undefined-behavior">It</span> is the programmer's responsibility to avoid the following in C and C++, and compilers can only provide very limited help with that:</p>
+<ul>
+<li>reading and writing out of the bounds of an array, an <code>std::vector</code>, or similar data structures,</li>
+<li>dereferencing dangling pointers (or references), i.e., pointers that point to data that are not valid any more,</li>
+<li>reading and writing data from different threads at the same time,</li>
+<li>and much more, such as incrementing an <code>int</code> that holds the value 2147483647 a.k.a <code>INT_MAX</code> by one, or <a href="https://lwn.net/Articles/342330/">dereferencing a null pointer, even if the value is never used and the dereference is optimized away completely</a>.</li>
+</ul>
+<p>All these cause <a href="https://en.cppreference.com/w/c/language/behavior">undefined bahaviour</a>, which means that basically anything can happen. The application might work as the developer expected, or it could yield incorrect results, or it could crash, or it could have a critical security vulnerability. Which of these you get can change at any time, e.g., when changing the optimization level or other compiler options, upgrading to a new compiler version, or modifying something in a different part of the code base.</p>
+<p>A blog series that Chris Lattner wrote in 2011 on undefined behaviour (<a href="http://blog.llvm.org/2011/05/what-every-c-programmer-should-know.html">part 1</a>, <a href="https://blog.llvm.org/2011/05/what-every-c-programmer-should-know_14.html">part 2</a>, <a href="https://blog.llvm.org/2011/05/what-every-c-programmer-should-know_21.html">part 3</a>) should still be mandatory reading for anyone who writes code in C and C++.<a href="#fnref:undefined-behavior">↩</a></p>
+</li>
+<li>
+<p><span id="fn:integers">Note</span> how Rust integer types make their bit width and their signedness explicit:</p>
+<ul>
+<li>signed integer types are <code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code>, <code>i128</code>, and <code>isize</code>,</li>
+<li>unsigned integer types are <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, and <code>usize</code>.</li>
+</ul>
+<p>The size of <code>isize</code> and <code>usize</code> depends on the platform: 32 bits on 32-bit systems, and 64 bits on 64-bit systems. They correspond to <code>size_t</code> and <code>ssize_t</code> in C.<a href="#fnref:integers">↩</a></p>
+</li>
+<li>
+<p><span id="fn:self">Note</span> that <code>self</code> must be stated explicitly as a function parameter, and that access to struct members must also be qualified with <code>self.</code>, just like in some other languages like, e.g., Python.<a href="#fnref:self">↩</a></p>
+</li>
+<li>
+<p><span id="fn:cell-final-expression">Note</span> that the cell output is the final expression without trailing semicolon in the cell. This corresponds to the fact that functions return the final expression without trailing semicolon if there is no return statement.<a href="#fnref:cell-final-expression">↩</a></p>
+</li>
+<li>
+<p><span id="fn:cpp-variant-pattern-matching">One</span> could argue that <a href="https://en.cppreference.com/w/cpp/utility/variant/visit"><code>std::visit</code></a> can be used as a workaround for pattern matching in C++. This is true, but using it feels more cumbersome and requires more code than proper pattern matching. There is a <a href="https://github.com/mpark/patterns">library</a> which adds pattern matching to C++ and which might evolve into something that will be added to the C++ standard. Compared to pattern matching in, e.g., Haskell and Rust, it still feels a bit unwieldy though.<a href="#fnref:cpp-variant-pattern-matching">↩</a></p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+    </div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../../../../categories/rust/" rel="tag">rust</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../../../../2022/07/12/set-up-local-k8s-cluster-and-deploy-self-made-microservice/" rel="prev" title="How to set up a local Kubernetes cluster and deploy a self-made microservice in less than 10 minutes">Previous post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+        
+    
+<div id="comment-section"></div>
+
+
+<div id="respond">
+<form id="comment-form" method="post" class="" action="https://staticman-freininghaus.onrender.com/v3/entry/github/freininghaus/freininghaus.github.io/main/comments">
+
+<fieldset id="comments-fieldset">
+<input type="hidden" name="options[origin]" value="posts/2024-02-04-brainfuck-interpreter-in-rust-part1/rust-bf-part1.ipynb"><input type="hidden" id="comment-replying-to-uid" name="fields[replying-to-id]" value=""><input type="hidden" name="options[title]" value="Learn Rust by building a Brainfuck interpreter, part 1: implement the tape and model the program as an abstract syntax tree"><div class="form-group mt-4">
+    <label for="comment-form-message"><h3>Add Comment</h3></label>
+    <textarea class="form-control" name="fields[message]" type="text" id="comment-form-message" placeholder="Your comment (markdown accepted)" required rows="6"></textarea>
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-name">Name</label>
+    <input class="form-control" name="fields[author]" type="text" id="comment-form-name" placeholder="Your name (required)" required>
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-email">E-mail</label>
+    <input class="form-control" name="fields[email]" type="email" id="comment-form-email" placeholder="Your email (optional)">
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-email">Website</label>
+    <input class="form-control" name="fields[url]" type="url" id="comment-form-url" placeholder="Link to your website (optional)">
+</div>
+
+  <div class="form-group" style="display:none;">
+    <label for="hp">Hp</label>
+    <input class="form-control" name="fields[hp]" id="hp" type="text" placeholder="Leave blank">
+</div>
+
+
+  <button class="btn btn-primary" id="comment-form-submit">
+    Submit comment
+  </button>
+
+</fieldset>
+</form>
+</div>
+
+<div class="modal" id="comments-modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="comments-modal-title"></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="comments-modal-text"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- script for moving the comment form next to a comment for replies -->
+<script src="../../../../../assets/js/staticman_comments.js"></script><!-- icon for the button while comment submission is in progress --><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><symbol id="icon-loading" viewbox="149.8 37.8 499.818 525"><path d="M557.8 187.8c13.8 0 24.601-10.8 24.601-24.6S571.6 138.6 557.8 138.6s-24.6 10.8-24.6 24.6c0 13.2 10.8 24.6 24.6 24.6zm61.2 90.6c-16.8 0-30.6 13.8-30.6 30.6s13.8 30.6 30.6 30.6 30.6-13.8 30.6-30.6c.6-16.8-13.2-30.6-30.6-30.6zm-61.2 145.2c-20.399 0-36.6 16.2-36.6 36.601 0 20.399 16.2 36.6 36.6 36.6 20.4 0 36.601-16.2 36.601-36.6C595 439.8 578.2 423.6 557.8 423.6zM409 476.4c-24 0-43.2 19.199-43.2 43.199s19.2 43.2 43.2 43.2 43.2-19.2 43.2-43.2S433 476.4 409 476.4zM260.8 411c-27 0-49.2 22.2-49.2 49.2s22.2 49.2 49.2 49.2 49.2-22.2 49.2-49.2-22.2-49.2-49.2-49.2zm-10.2-102c0-27.6-22.8-50.4-50.4-50.4-27.6 0-50.4 22.8-50.4 50.4 0 27.6 22.8 50.4 50.4 50.4 27.6 0 50.4-22.2 50.4-50.4zm10.2-199.8c-30 0-54 24-54 54s24 54 54 54 54-24 54-54-24.6-54-54-54zM409 37.8c-35.4 0-63.6 28.8-63.6 63.6S374.2 165 409 165s63.6-28.8 63.6-63.6-28.2-63.6-63.6-63.6z"></path></symbol></svg></section><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" integrity="sha384-3lJUsx1TJHt7BA4udB5KPnDrlkO8T6J6v/op7ui0BbCjvZ9WqV4Xm6DTP6kQ/iBH" crossorigin="anonymous"></script><script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$latex ','$'], ['\\(','\\)']]}});
+        </script></article><!--End of body content--><footer id="footer">
+            Contents © 2024         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+            
+        </footer>
+</div>
+</div>
+
+
+            <script src="../../../../../assets/js/jquery.min.js"></script><script src="../../../../../assets/js/popper.min.js"></script><script src="../../../../../assets/js/bootstrap.min.js"></script><script src="../../../../../assets/js/baguetteBox.min.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>
