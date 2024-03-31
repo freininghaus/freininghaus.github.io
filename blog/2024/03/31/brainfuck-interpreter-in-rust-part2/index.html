@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn Rust by building a Brainfuck interpreter, part 2: the execution engine | Frank Reininghaus</title>
+<link href="../../../../../assets/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/baguetteBox.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/rst.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/code.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/theme.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/custom.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/ipython.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/nikola_ipython.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../../../../rss.xml">
+<link rel="canonical" href="https://freininghaus.github.io/blog/2024/03/31/brainfuck-interpreter-in-rust-part2/">
+<!--[if lt IE 9]><script src="../../../../../../../../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Frank Reininghaus">
+<link rel="prev" href="../../../02/04/brainfuck-interpreter-in-rust-part1/" title="Learn Rust by building a Brainfuck interpreter, part 1: implement the tape and model the program as an abstract syntax tree" type="text/html">
+<meta property="og:site_name" content="Frank Reininghaus">
+<meta property="og:title" content="Learn Rust by building a Brainfuck interpreter, part 2: the execution ">
+<meta property="og:url" content="https://freininghaus.github.io/blog/2024/03/31/brainfuck-interpreter-in-rust-part2/">
+<meta property="og:description" content="Introduction¶In the last post, we created the first building blocks for our Brainfuck interpreter in Rust:
+
+A data structure for the tape, which supports four operations:
+
+left and right move the data">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2024-03-31T20:49:14Z">
+<meta property="article:tag" content="rust">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../../../../">
+
+            <span id="blog-title">Frank Reininghaus</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../../../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../../../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../../../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+<a href="../../../../../pages/about/" class="nav-link">About</a>
+
+                
+                
+                    
+    
+    </li>
+<li class="nav-item">
+    <a href="index.ipynb" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+        
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Learn Rust by building a Brainfuck interpreter, part 2: the execution engine</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Frank Reininghaus
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2024-03-31T20:49:14Z" itemprop="datePublished" title="2024-03-31">2024-03-31</time></a>
+            </p>
+                <p class="commentline">
+    
+<a href="#comment-section">Comments</a>
+
+
+            
+        </p>
+<p class="sourceline"><a href="index.ipynb" class="sourcelink">Source</a></p>
+
+        </div>
+        
+
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <div class="cell border-box-sizing text_cell rendered" id="cell-id=3f87b73d-99f3-4333-9e03-0278d843336b">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Introduction">Introduction<a class="anchor-link" href="#Introduction">¶</a>
+</h3>
+<p>In the <a href="../../../02/04/brainfuck-interpreter-in-rust-part1">last post</a>, we created the first building blocks for our Brainfuck interpreter in Rust:</p>
+<ul>
+<li>
+<p>A data structure for the tape, which supports four operations:</p>
+<ul>
+<li>
+<code>left</code> and <code>right</code> move the data pointer,</li>
+<li>
+<code>get</code> returns the <code>u8</code> value that is stored in the current cell,</li>
+<li>
+<code>set</code> assigns a new <code>u8</code> value to the current cell.</li>
+</ul>
+</li>
+<li>
+<p>A data type for the instructions. It is based on Rust's enums, which are much more powerful than enums in C or C++ because they allow to build <a href="https://en.wikipedia.org/wiki/Algebraic_data_type">algebraic data types</a>:</p>
+<div class="highlight"><pre><span></span><span class="cp">#[derive(Debug)]</span>
+<span class="k">enum</span> <span class="nc">Instruction</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Inc</span><span class="p">,</span><span class="w">                    </span><span class="c1">// +</span>
+<span class="w">    </span><span class="n">Dec</span><span class="p">,</span><span class="w">                    </span><span class="c1">// -</span>
+<span class="w">    </span><span class="n">Left</span><span class="p">,</span><span class="w">                   </span><span class="c1">// &lt;</span>
+<span class="w">    </span><span class="n">Right</span><span class="p">,</span><span class="w">                  </span><span class="c1">// &gt;</span>
+<span class="w">    </span><span class="n">Read</span><span class="p">,</span><span class="w">                   </span><span class="c1">// ,</span>
+<span class="w">    </span><span class="n">Write</span><span class="p">,</span><span class="w">                  </span><span class="c1">// .</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">(</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="p">)</span><span class="w">  </span><span class="c1">// [...]</span>
+<span class="p">}</span>
+</pre></div>
+<p>This definition allows to represent a Brainfuck program as an <a href="https://en.wikipedia.org/wiki/Abstract_syntax_tree">abstract syntax tree</a>, which makes program execution simple. However, it requires a bit more work when parsing the program, as we will see in a later post in this series.</p>
+</li>
+</ul>
+<p>In this post, we will implement the next part of the interpreter: an execution engine which applies instructions to the state of the tape, and performs input and output.</p>
+<!-- TEASER_END -->
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=f22fb8fb-3e43-44f9-b31b-9b6577a1dfd0">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Importing-Rust-files-into-a-Jupyter-notebook">Importing Rust files into a Jupyter notebook<a class="anchor-link" href="#Importing-Rust-files-into-a-Jupyter-notebook">¶</a>
+</h3>
+<p>I've taken the code from the <a href="https://github.com/freininghaus/freininghaus.github.io/blob/main/posts/2024-02-04-brainfuck-interpreter-in-rust-part1/rust-bf-part1.ipynb">Jupyter notebook</a> that the last post was based on and copied it to proper Rust files in the directory for the new blog post: <a href="https://github.com/freininghaus/freininghaus.github.io/blob/main/posts/2024-03-31-brainfuck-interpreter-in-rust-part2/src/tape.rs">tape.rs</a>, <a href="https://github.com/freininghaus/freininghaus.github.io/blob/main/posts/2024-03-31-brainfuck-interpreter-in-rust-part2/src/instructions.rs">instructions.rs</a>.
+The <a href="https://github.com/evcxr/evcxr">Jupyter kernel for Rust</a> allows to import these into the notebook that is the source of the blog post which you are currently reading:<a href="#fn:import-local-crate"><sup id="fnref:import-local-crate">1</sup></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=db221ef7-c909-4b52-8703-b06f05a4095f">
+<div class="input">
+<div class="prompt input_prompt">In [2]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span>:<span class="nc">dep</span><span class="w"> </span><span class="n">rust_bf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"rust-bf"</span><span class="p">,</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"."</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=62dbf4ad-3f8b-4cdc-a3f7-f2a01c93db41">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>For convenience, we will import all variants of the <code>Instruction</code> enum and the <code>Tape</code> data structure:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=8fcbf308-563b-4259-be03-ac8f82e3002d">
+<div class="input">
+<div class="prompt input_prompt">In [3]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">use</span><span class="w"> </span><span class="n">rust_bf</span>::<span class="p">{</span><span class="n">instructions</span>::<span class="p">{</span><span class="n">Instruction</span><span class="p">,</span><span class="w"> </span><span class="n">Instruction</span>::<span class="o">*</span><span class="p">},</span><span class="w"> </span><span class="n">tape</span>::<span class="n">Tape</span><span class="p">};</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=732e3ecf-9388-4d09-ba21-5c85b23461ea">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We can now create a tape and manipulate it:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=7262eb64-8aa5-4274-b4a8-4370bf5c2f63">
+<div class="input">
+<div class="prompt input_prompt">In [4]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span>::<span class="n">new</span><span class="p">();</span>
+<span class="n">t</span><span class="p">.</span><span class="n">right</span><span class="p">();</span>
+<span class="n">t</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="mi">42</span><span class="p">);</span>
+<span class="n">t</span><span class="p">.</span><span class="n">left</span><span class="p">();</span>
+<span class="n">t</span><span class="p">.</span><span class="n">left</span><span class="p">();</span>
+<span class="n">t</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">t</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">5</span><span class="p">);</span>
+<span class="n">t</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[4]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>Tape { data: [5, 0, 42], pos: 0 }</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=a6193df1-a38a-4161-bdbf-f4f06032f4c4">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Even though we cannot write Brainfuck programs in the usual way, we can construct the abstract syntax tree using the variants of the <code>Instruction</code> type directly:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=74836404-3882-466c-be24-fbd89f5921e1">
+<div class="input">
+<div class="prompt input_prompt">In [5]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="c1">// 1. Read a byte value from standard input.</span>
+<span class="c1">// 2. Write all numbers from this value down to zero to standard output.</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">program_countdown</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="fm">vec!</span><span class="p">[</span>
+<span class="w">    </span><span class="n">Read</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="n">Write</span><span class="p">,</span><span class="w"> </span><span class="n">Dec</span><span class="p">]),</span>
+<span class="w">    </span><span class="n">Write</span>
+<span class="p">];</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=d06d3845-d65b-457d-a211-4c418ac5a7c0">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>But how can we execute the program?</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=837f415c-4fa8-44ea-8621-7cab8c7f3cc6">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Step-1:-programs-that-do-not-need-I/O">Step 1: programs that do not need I/O<a class="anchor-link" href="#Step-1:-programs-that-do-not-need-I/O">¶</a>
+</h3>
+<p>We'll start simple and look at programs which do not use the <code>Read</code> and <code>Write</code> instructions. Since such a program does not create any output, we can only observe the modifications to the tape.</p>
+<p>This is a program that will aggregate the values of neighbouring non-zero cells to one of these cells, and then terminate:<a href="#fn:initial-state-all-zeroes"><sup id="fnref:initial-state-all-zeroes">2</sup></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=60cd252d-1654-4a06-bf05-0cd77bc2e399">
+<div class="input">
+<div class="prompt input_prompt">In [6]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">program_add</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="c1">// Go right until the current cell is zero.</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="n">Right</span><span class="p">]),</span><span class="w">  </span>
+
+<span class="w">    </span><span class="c1">// Go to the second non-zero cell from the right.</span>
+<span class="w">    </span><span class="n">Left</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Left</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">// As long as the current cell is non-zero:</span>
+<span class="w">    </span><span class="c1">// * add the value of the right neighbour cell</span>
+<span class="w">    </span><span class="c1">// * move the data pointer one cell to the left</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span>
+<span class="w">        </span><span class="n">Right</span><span class="p">,</span>
+<span class="w">        </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="n">Dec</span><span class="p">,</span><span class="w"> </span><span class="n">Left</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Right</span><span class="p">]),</span>
+<span class="w">        </span><span class="n">Left</span><span class="p">,</span>
+<span class="w">        </span><span class="n">Left</span>
+<span class="w">    </span><span class="p">])</span>
+<span class="p">];</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=cb49d858-97aa-46e1-94e8-97b691ed515c">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>So if the initial state of the tape is such that it contains the values 3, 4, and 8 surrounded by zeroes,</p>
+<table><tbody><tr>
+<td style="border-color:black;border-style:solid;border-width:1px">...</td>
+<td style="border-color:black;border-style:solid;border-width:1px">0</td>
+<td style="border-color:black;border-style:solid;border-width:1px">3</td>
+<td style="border-color:black;border-style:solid;border-width:1px">4</td>
+<td style="border-color:black;border-style:solid;border-width:1px">8</td>
+<td style="border-color:black;border-style:solid;border-width:1px">0</td>
+<td style="border-color:black;border-style:solid;border-width:1px">...</td>
+</tr></tbody></table>
+<p>then we would expect that after runing the program, there is only one non-zero cell remaining, which contains the sum of the values:</p>
+<table><tbody><tr>
+<td style="border-color:black;border-style:solid;border-width:1px">...</td>
+<td style="border-color:black;border-style:solid;border-width:1px">0</td>
+<td style="border-color:black;border-style:solid;border-width:1px">15</td>
+<td style="border-color:black;border-style:solid;border-width:1px">0</td>
+<td style="border-color:black;border-style:solid;border-width:1px">0</td>
+<td style="border-color:black;border-style:solid;border-width:1px">0</td>
+<td style="border-color:black;border-style:solid;border-width:1px">...</td>
+</tr></tbody></table>
+<p>How can we achieve this?</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=79705f35-0002-47e0-a010-137acee54ea4">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We will first implement the skeleton of the execution function, which takes two parameters for the time being:</p>
+<ul>
+<li>
+<code>tape</code> is a mutable reference to the tape (<code>&amp;mut Tape</code>). It needs to be mutable because the tape contents will be modified during the execution.</li>
+<li>
+<code>instructions</code> is a <em>slice</em> of instructions (<code>&amp;[Instruction]</code>). Essentially, a slice combines a pointer to the start of a range of items, and the length of the range.
+Using a slice, rather than a <code>Vec</code>, is more flexible because this allows to call the function not only with a <code>Vec</code>, but also with fixed-size arrays and parts of a <code>Vec</code> or an array.
+Note that the Rust compiler will convert a reference to a <code>Vec</code> automatically to a slice when calling the function.<a href="#fn:deref-coercion"><sup id="fnref:deref-coercion">3</sup></a>
+</li>
+</ul>
+<p>The function will then loop over <code>instructions</code>.</p>
+<p>Let's have a look at what we have so far and just print each instruction before we will see how to evaluate them:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=83bac603-72d2-426f-ab97-41b2d685356a">
+<div class="input">
+<div class="prompt input_prompt">In [7]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span> <span class="nf">execute_v1</span><span class="p">(</span><span class="n">tape</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">Tape</span><span class="p">,</span><span class="w"> </span><span class="n">instructions</span>: <span class="kp">&amp;</span><span class="p">[</span><span class="n">Instruction</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="n">instruction</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">instructions</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">"execute instruction: {:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">instruction</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span>::<span class="n">new</span><span class="p">();</span>
+<span class="n">execute_v1</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">t</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">program_add</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>execute instruction: Loop([Right])
+execute instruction: Left
+execute instruction: Left
+execute instruction: Loop([Right, Loop([Dec, Left, Inc, Right]), Left, Left])
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=3e17d696-348a-4770-b0ea-781493bf1b4e">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now we want to do something useful with our instructions.</p>
+<p>Enum values, such as our instructions of type <code>Instruction</code>, are usually evaluated using pattern matching in Rust. A match expression looks like this:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=36591593-7c5c-4b5d-beba-5427d328a14d">
+<div class="input">
+<div class="prompt input_prompt">In [8]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">for</span><span class="w"> </span><span class="n">instruction</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">[</span><span class="n">Left</span><span class="p">,</span><span class="w"> </span><span class="n">Right</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Dec</span><span class="p">,</span><span class="w"> </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="n">Dec</span><span class="p">,</span><span class="w"> </span><span class="n">Right</span><span class="p">]),</span><span class="w"> </span><span class="n">Read</span><span class="p">,</span><span class="w"> </span><span class="n">Write</span><span class="p">]</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">match</span><span class="w"> </span><span class="n">instruction</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">Left</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s">"left"</span><span class="p">,</span>
+<span class="w">        </span><span class="n">Right</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s">"right"</span><span class="p">,</span>
+<span class="w">        </span><span class="n">Inc</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s">"+"</span><span class="p">,</span>
+<span class="w">        </span><span class="n">Dec</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s">"-"</span><span class="p">,</span>
+<span class="w">        </span><span class="n">Loop</span><span class="p">(</span><span class="n">body</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s">"loop"</span><span class="p">,</span>
+<span class="w">        </span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s">"?"</span>
+<span class="w">    </span><span class="p">};</span>
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"instruction: {} "</span><span class="p">,</span><span class="w"> </span><span class="n">result</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>instruction: left 
+instruction: right 
+instruction: + 
+instruction: - 
+instruction: loop 
+instruction: ? 
+instruction: ? 
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=f03c043a-fd02-47ff-9763-4091bdfec12e">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>It contains match arms, which consist of a pattern, and some code that is evaluated if the pattern matches the value. In this simple example, the code is just a string constant for each case.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=7c4b7ac9-c7eb-4a2c-8d78-42e8c64a459a">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now we can think about what code to execute for each instruction:</p>
+<ul>
+<li>
+<code>Left</code> and <code>Right</code> are easy: for these, we just have to call <code>tape.left()</code> and <code>tape.right()</code>, respectively.</li>
+<li>For <code>Inc</code>, we have to increase the value of the current cell: <code>tape.set(tape.get() + 1)</code>
+</li>
+<li>Analogously for <code>Dec</code>: <code>tape.set(tape.get() - 1)</code>
+</li>
+</ul>
+<p>When we encounter a <code>Loop</code> instruction, we have to check if the current cell is zero. If that is not the case, we repeatedly execute all instructions in the loop body until the current cell becomes zero:</p>
+<div class="highlight"><pre><span></span><span class="k">while</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">execute</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">tape</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+<p>If we put everything together, we end up with this function that can execute any Brainfuck program without <code>Read</code> and <code>Write</code> instructions:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=0f536ac1-125a-4eba-b0f3-00b6950408ac">
+<div class="input">
+<div class="prompt input_prompt">In [9]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span> <span class="nf">execute_v2</span><span class="p">(</span><span class="n">tape</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">Tape</span><span class="p">,</span><span class="w"> </span><span class="n">instructions</span>: <span class="kp">&amp;</span><span class="p">[</span><span class="n">Instruction</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="n">instruction</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">instructions</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">match</span><span class="w"> </span><span class="n">instruction</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">Left</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">left</span><span class="p">(),</span>
+<span class="w">            </span><span class="n">Right</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">right</span><span class="p">(),</span>
+<span class="w">            </span><span class="n">Inc</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span>
+<span class="w">            </span><span class="n">Dec</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span>
+<span class="w">            </span><span class="n">Loop</span><span class="p">(</span><span class="n">body</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">while</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">execute_v2</span><span class="p">(</span><span class="n">tape</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">)</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="fm">panic!</span><span class="p">(</span><span class="s">"Read and Write are not handled yet!"</span><span class="p">)</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=d78466d6-ea9b-432d-9c30-14222701f5c4">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Note that we must handle all cases in the match expression, or the code will not compile. Here we use the <code>panic!</code> macro, which usually aborts the process with the given error message, if the <code>Read</code> or <code>Write</code> instructions are used.</p>
+<p>We can now try to execute our program that sums the numbers on the tape:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=1cd0098e-1e2f-4c03-9d14-43636a6b3095">
+<div class="input">
+<div class="prompt input_prompt">In [10]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span>::<span class="n">new</span><span class="p">();</span>
+<span class="n">t</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span>
+<span class="n">t</span><span class="p">.</span><span class="n">right</span><span class="p">();</span>
+<span class="n">t</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
+<span class="n">t</span><span class="p">.</span><span class="n">right</span><span class="p">();</span>
+<span class="n">t</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="mi">8</span><span class="p">);</span>
+<span class="n">t</span><span class="p">.</span><span class="n">left</span><span class="p">();</span>
+<span class="n">t</span><span class="p">.</span><span class="n">left</span><span class="p">();</span>
+
+<span class="fm">println!</span><span class="p">(</span><span class="s">"Initial state: {:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">t</span><span class="p">);</span>
+
+<span class="n">execute_v2</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">t</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">program_add</span><span class="p">);</span>
+
+<span class="fm">println!</span><span class="p">(</span><span class="s">"Final state:   {:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">t</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Initial state: Tape { data: [3, 4, 8], pos: 0 }
+Final state:   Tape { data: [0, 15, 0, 0, 0], pos: 0 }
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=36830b20-a63e-48bd-a936-8bdc61320e21">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>It works!</p>
+<p>Note that every cell which has once been the current cell has got the value zero. This is not significant though because every cell which has not been visited yet has the value zero implicitly.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=114ad484-d628-4d42-8df9-00c00a16b90b">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Step-2:-input-and-output">Step 2: input and output<a class="anchor-link" href="#Step-2:-input-and-output">¶</a>
+</h3>
+<p>So far, we have ignored the instructions <code>Read</code> and <code>Write</code> (denoted by ',' and '.' in Brainfuck source code).</p>
+<p>We can implement match arms for them in the execution function as follows.</p>
+<p>For <code>Read</code>, we could access standard input with the function <a href="https://doc.rust-lang.org/std/io/fn.stdin.html"><code>std::io::stdin()</code></a> , and read a byte from it with <a href="https://doc.rust-lang.org/std/io/struct.Stdin.html#method.read_exact"><code>read_exact(...)</code></a>. The following function shows how it works:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=87e9c7ac-4a96-44bb-b7c1-8b9f72ed3759">
+<div class="input">
+<div class="prompt input_prompt">In [11]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">use</span><span class="w"> </span><span class="n">std</span>::<span class="n">io</span>::<span class="n">Read</span><span class="p">;</span><span class="w">  </span><span class="c1">// needed to bring read_exact(...) into scope</span>
+
+<span class="k">fn</span> <span class="nf">read</span><span class="p">()</span><span class="w"> </span>-&gt; <span class="kt">u8</span> <span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">buf</span>: <span class="p">[</span><span class="kt">u8</span><span class="p">;</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+<span class="w">    </span><span class="n">std</span>::<span class="n">io</span>::<span class="n">stdin</span><span class="p">().</span><span class="n">read_exact</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">buf</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
+<span class="w">    </span><span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=4c0f7a21-4909-4b9e-ac4a-58de7adcf964">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><code>read_exact(...)</code> tries to fill the given <code>u8</code> slice with bytes from standard input. The reason why we call <code>unwrap()</code> on its return value is the following:</p>
+<p>In Rust, functions that can fail usually return a value of the type <code>Result&lt;T, E&gt;</code>, where <code>T</code> is the type that a successful execution of the function would yield, and <code>E</code> is an error type. For <code>read_exact(...)</code>, which returns no useful information in the successful case, <code>T</code> is <code>()</code>, the empty type.
+<code>Result</code> is an enum with two variants:</p>
+<ul>
+<li>A value of type <code>Ok(T)</code> is returned if the function execution was successful.</li>
+<li>An <code>Err(E)</code> signals that an error occurred.</li>
+</ul>
+<p>Therefore, it is impossible to forget error handling if the return value is used.
+There are several ways to work with results and errors. Here we choose to call <code>.unwrap()</code> on the result, which unwraps the value from <code>Ok</code>, and panics if the result is actually an <code>Err</code>.
+Using <code>unwrap</code> is useful in two situations:</p>
+<ul>
+<li>If we are 100% sure that there cannot be an <code>Err</code> value in the result because we know that some preconditions are fulfilled which guarantee success.</li>
+<li>If a panic is acceptable, e.g., because we are just experimenting, and not writing production code.</li>
+</ul>
+<p>Note that since we do not need the empty result value of <code>read_exact(...)</code> at all in this particular case, we could in principle forget to handle errors.
+The code would compile just fine without calling <code>.unwrap()</code>, but the compiler would warn about the lack of error handling (at least outside Jupyter notebooks).</p>
+<p>In a future post, we will discuss how to handle all errors properly in our Brainfuck interpreter.</p>
+<p>Similarly, we can use <a href="https://doc.rust-lang.org/std/io/fn.stdout.html"><code>std::io::stdout()</code></a> to access standard output for the <code>Write</code> instruction, and write a byte to it with <a href="https://doc.rust-lang.org/std/io/struct.Stdout.html#method.write_all-1"><code>write_all(...)</code></a>:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=e94aeefc-ef28-4591-bb85-cd3194fa41b9">
+<div class="input">
+<div class="prompt input_prompt">In [12]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">use</span><span class="w"> </span><span class="n">std</span>::<span class="n">io</span>::<span class="n">Write</span><span class="p">;</span><span class="w">  </span><span class="c1">// needed to bring `write(...)` into scope</span>
+
+<span class="k">fn</span> <span class="nf">write</span><span class="p">(</span><span class="n">value</span>: <span class="kt">u8</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span>::<span class="n">io</span>::<span class="n">stdout</span><span class="p">().</span><span class="n">write</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="n">value</span><span class="p">]).</span><span class="n">unwrap</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=e3e13d9d-bb5a-4184-9784-a0e49c28d66d">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Similar to what we saw for reading, <code>write(...)</code> will attempt to write bytes from a <code>u8</code> slice to standard output, and return <code>Ok(n)</code> if <code>n</code> bytes were written successfully. Again, we simply unwrap the result value and postpone proper error handling to a future blog post.</p>
+<p>The function which executes Brainfuck code, including input and output, now looks like this:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=cb222795-d612-4a31-9bb1-3e2f479b8b01">
+<div class="input">
+<div class="prompt input_prompt">In [13]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span> <span class="nf">execute_v3</span><span class="p">(</span><span class="n">tape</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">Tape</span><span class="p">,</span><span class="w"> </span><span class="n">instructions</span>: <span class="kp">&amp;</span><span class="p">[</span><span class="n">Instruction</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="n">instruction</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">instructions</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">match</span><span class="w"> </span><span class="n">instruction</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">Left</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">left</span><span class="p">(),</span>
+<span class="w">            </span><span class="n">Right</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">right</span><span class="p">(),</span>
+<span class="w">            </span><span class="n">Inc</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span>
+<span class="w">            </span><span class="n">Dec</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span>
+<span class="w">            </span><span class="n">Loop</span><span class="p">(</span><span class="n">body</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">while</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">execute_v3</span><span class="p">(</span><span class="n">tape</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">)</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="n">Read</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">buf</span>: <span class="p">[</span><span class="kt">u8</span><span class="p">;</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+<span class="w">                </span><span class="n">std</span>::<span class="n">io</span>::<span class="n">stdin</span><span class="p">().</span><span class="n">read_exact</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">buf</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
+<span class="w">                </span><span class="n">tape</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="n">Write</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">std</span>::<span class="n">io</span>::<span class="n">stdout</span><span class="p">().</span><span class="n">write</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()]).</span><span class="n">unwrap</span><span class="p">();</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=8ea491ac-90e1-4284-927b-14a4a68fa11d">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>To test it, we will try the following program which is the equivalent of</p>
+<div class="highlight"><pre><span></span><span class="fm">print!</span><span class="p">(</span><span class="s">"#</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+</pre></div>
+<p>in Rust:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=259fe36f-be39-4bb3-935f-e6fa27a45aef">
+<div class="input">
+<div class="prompt input_prompt">In [14]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">print_hash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="fm">vec!</span><span class="p">[</span>
+<span class="w">    </span><span class="c1">// load ASCII value for '#' (35)</span>
+<span class="w">    </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">// write to stdout</span>
+<span class="w">    </span><span class="n">Write</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">// clear the current cell</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="n">Dec</span><span class="p">]),</span>
+
+<span class="w">    </span><span class="c1">// load ASCII value for '\n' (10)</span>
+<span class="w">    </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">// write to stdout</span>
+<span class="w">    </span><span class="n">Write</span>
+<span class="p">];</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=f3cf61ae-e43e-4444-ad2f-03cde1335f71">
+<div class="input">
+<div class="prompt input_prompt">In [15]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span>::<span class="n">new</span><span class="p">();</span>
+<span class="n">execute_v3</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">t</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">print_hash</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>#
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=872f0ef2-0f6a-4813-bc40-5b7def81e4cc">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Input also works, but cannot be demonstrated easily in a Jupyter notebook.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=d4f06a29-d490-41ea-8676-c1efb7e4aa40">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Making-input-and-output-more-flexible-and-testable-with-the-traits-Read-and-Write">Making input and output more flexible and testable with the traits <code>Read</code> and <code>Write</code><a class="anchor-link" href="#Making-input-and-output-more-flexible-and-testable-with-the-traits-Read-and-Write">¶</a>
+</h3>
+<p>We will now make the function <code>execute(...)</code> more generic, such that it does not use standard input and standard output directly. Instead, we will make the function accept parameters which define where data should be read from and written to. We can then just pass <code>std::io::stdin()</code> and <code>std::io::stdout()</code> to this function to get the same behavior that we had so far.</p>
+<p>This approach has some advantages</p>
+<ul>
+<li>We can simulate input even in a Jupyter notebook.</li>
+<li>More importantly: we can write unit tests for our execution engine. These tests can provide input data and verify output data.</li>
+</ul>
+<p>How does this work?</p>
+<p>Here is a generic function that writes a byte to a given destination:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=f47b817e-b836-47b8-bad2-2d8293d4b8b6">
+<div class="input">
+<div class="prompt input_prompt">In [16]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span> <span class="nf">write</span><span class="o">&lt;</span><span class="n">W</span>: <span class="nc">Write</span><span class="o">&gt;</span><span class="p">(</span><span class="n">dest</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">W</span><span class="p">,</span><span class="w"> </span><span class="n">value</span>: <span class="kt">u8</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">buf</span>: <span class="p">[</span><span class="kt">u8</span><span class="p">;</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="n">value</span><span class="p">];</span>
+<span class="w">    </span><span class="n">dest</span><span class="p">.</span><span class="n">write_all</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">buf</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=04c3afe7-9799-4d69-a949-88c686105fd3">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>The function now accepts a parameter of the generic type <code>W</code>. The type is not completely arbitrary: the angle brackets between function name and parameter list tell that the type must implement the <a href="https://doc.rust-lang.org/std/io/trait.Write.html"><code>Write</code> trait</a>. Without this restriction, the compiler would not accept the call to <code>write_all(...)</code> because this function is provided by the trait.</p>
+<p>Rust traits are a bit like interfaces in, e.g., Java and concepts in C++.<a href="#fn:trait-objects"><sup id="fnref:trait-objects">4</sup></a> They describe what conditions a type must fulfil. The <code>Write</code> trait describes things that bytes can be written to. So we can call this function with standard output:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=9f430c91-02d2-4466-ba16-810d48abd41a">
+<div class="input">
+<div class="prompt input_prompt">In [17]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">write</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">std</span>::<span class="n">io</span>::<span class="n">stdout</span><span class="p">(),</span><span class="w"> </span><span class="sc">b'#'</span><span class="p">);</span>
+<span class="n">write</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">std</span>::<span class="n">io</span>::<span class="n">stdout</span><span class="p">(),</span><span class="w"> </span><span class="sc">b'\n'</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>#
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=9d3df08c-88b9-4c3e-a0bc-6927de98b4ab">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>But we can also use other types which implement <code>Write</code>. This includes <code>Vec&lt;u8&gt;</code>, a vector of bytes. The written bytes will just be appended to the vector:<a href="#fn:type-deduction"><sup id="fnref:type-deduction">5</sup></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=005890ee-e405-4ff3-985f-2b47bce361de">
+<div class="input">
+<div class="prompt input_prompt">In [18]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Vec</span>::<span class="n">new</span><span class="p">();</span>
+<span class="n">write</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="sc">b'#'</span><span class="p">);</span>
+<span class="n">write</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="sc">b'\n'</span><span class="p">);</span>
+<span class="fm">println!</span><span class="p">(</span><span class="s">"data={:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">);</span>
+
+<span class="c1">// We can also interpret the Vec&lt;u8&gt; as an UTF-8 string.</span>
+<span class="c1">// Note that from_utf8(...) returns a Result because it</span>
+<span class="c1">// would fail for input which is not valid UTF-8:</span>
+<span class="fm">println!</span><span class="p">(</span><span class="s">"data as str: {:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">std</span>::<span class="kt">str</span>::<span class="n">from_utf8</span><span class="p">(</span><span class="o">&amp;</span><span class="n">data</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>data=[35, 10]
+data as str: Ok("#\n")
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=2002ead4-43b4-4c57-8d21-b186bbf9a897">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We can make the input that we read from generic in the same way by using the <code>Read</code> trait.</p>
+<p>Our generic execution function then looks like this:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=3f90b6ce-e769-49a4-9837-ffb3d53cc07b">
+<div class="input">
+<div class="prompt input_prompt">In [19]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span> <span class="nf">execute_v4</span><span class="o">&lt;</span><span class="n">R</span>: <span class="nc">Read</span><span class="p">,</span><span class="w"> </span><span class="n">W</span>: <span class="nc">Write</span><span class="o">&gt;</span><span class="p">(</span><span class="n">tape</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">Tape</span><span class="p">,</span><span class="w"> </span><span class="n">instructions</span>: <span class="kp">&amp;</span><span class="p">[</span><span class="n">Instruction</span><span class="p">],</span><span class="w"> </span><span class="n">input</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">R</span><span class="p">,</span><span class="w"> </span><span class="n">output</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">W</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="n">instruction</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">instructions</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">match</span><span class="w"> </span><span class="n">instruction</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">Left</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">left</span><span class="p">(),</span>
+<span class="w">            </span><span class="n">Right</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">right</span><span class="p">(),</span>
+<span class="w">            </span><span class="n">Inc</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span>
+<span class="w">            </span><span class="n">Dec</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span>
+<span class="w">            </span><span class="n">Loop</span><span class="p">(</span><span class="n">body</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">while</span><span class="w"> </span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">execute_v4</span><span class="p">(</span><span class="n">tape</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">,</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="n">output</span><span class="p">)</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="n">Read</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">buf</span>: <span class="p">[</span><span class="kt">u8</span><span class="p">;</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+<span class="w">                </span><span class="n">input</span><span class="p">.</span><span class="n">read_exact</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">buf</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
+<span class="w">                </span><span class="n">tape</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="n">Write</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">output</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="n">tape</span><span class="p">.</span><span class="n">get</span><span class="p">()]).</span><span class="n">unwrap</span><span class="p">();</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=b059771f-5819-4cd5-9ab5-818feb7f391c">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>To test this execution function, we will use the countdown program that we saw earlier:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=f1e9d049-d4c4-4cb5-b7e2-8353f44c7dc9">
+<div class="input">
+<div class="prompt input_prompt">In [20]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="c1">// 1. Read a byte value from standard input.</span>
+<span class="c1">// 2. Write all numbers from this value down to zero to standard output.</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">program_countdown</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="fm">vec!</span><span class="p">[</span>
+<span class="w">    </span><span class="n">Read</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="n">Write</span><span class="p">,</span><span class="w"> </span><span class="n">Dec</span><span class="p">]),</span>
+<span class="w">    </span><span class="n">Write</span>
+<span class="p">];</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=5b928101-7df3-430e-8316-834c5de4f28e">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Given a byte with the value 10 as input, the program produces this output:<a href="#fn:variable-scope"><sup id="fnref:variable-scope">6</sup></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=97239b3a-7691-4db0-8786-2234260cf774">
+<div class="input">
+<div class="prompt input_prompt">In [21]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">ten</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="fm">vec!</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">input</span>: <span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">ten</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Vec</span>::<span class="n">new</span><span class="p">();</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span>::<span class="n">new</span><span class="p">();</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="n">execute_v4</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">t</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">program_countdown</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">output</span><span class="p">);</span>
+
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"remaining input: {:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">input</span><span class="p">);</span>
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"output: {:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">output</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>remaining input: []
+output: [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=1d0cf9ed-d8fc-42c5-8556-57116ec977ef">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>So it works as expected 🙂</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=196beaca-a2d6-4d3b-bd2d-a8a8c3fdc92c">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Summary-and-outlook">Summary and outlook<a class="anchor-link" href="#Summary-and-outlook">¶</a>
+</h3>
+<p>We have combined the tape data structure and the instruction data type from the last post, and implemented a function that can execute the abstract syntax tree for any Brainfuck program in the context of the tape. Input and output were handled in a generic way using the <code>Read</code> and <code>Write</code> traits, such that program execution can be tested easily.</p>
+<p>In the next post, we will implement a parser that transforms Brainfuck source code to an abstract syntax tree.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=61adf228-2eac-4f9c-913a-752817dc5aea">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<hr>
+<ol>
+<li>
+<p><span id="fn:import-local-crate">The</span> <a href="https://github.com/evcxr/evcxr/blob/main/COMMON.md">documentation</a> for the Rust Jupyter kernel describes how to do this (search for "<em>You can use the local work-in-progress crate like this</em>"). <a href="#fnref:import-local-crate">↩</a></p>
+</li>
+<li>
+<p><span id="fn:initial-state-all-zeroes">Note</span> that Brainfuck programs usually operate on a tape which has all cells initialized to zero. So strictly speaking, a program that only sums the initial cell values does not make much sense. It is only used to test our intermediate step on the way to a full-featured Brainfuck execution engine here.<a href="#fnref:initial-state-all-zeroes">↩</a></p>
+</li>
+<li>
+<p><span id="fn:deref-coercion">This</span> feature is called <a href="https://doc.rust-lang.org/book/ch15-02-deref.html#implicit-deref-coercions-with-functions-and-methods">deref coercion</a>. <a href="#fnref:deref-coercion">↩</a></p>
+</li>
+<li>
+<p><span id="fn:trait-objects">Our</span> generic function <code>write&lt;W: Write&gt;(...)</code> is like a template in C++ in the sense that the compiler will generate separate assembly for each type that the function is used with. So our use of traits to define conditions that the type must fulfil corresponds more to concepts in C++ than to interfaces in Java. However, traits can also be used in a more dynamic way, such that only one version of the function exists in assembly and machine code, and dispatch is done dynamically at runtime with virtual function calls. This is more like what interfaces in Java and abstract base classes in C++ are used for.</p>
+<p>Here is an example function, which gets a so-called <em>trait object</em> as a parameter:</p>
+<div class="highlight"><pre><span></span><span class="k">fn</span> <span class="nf">write_trait_object</span><span class="p">(</span><span class="n">w</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="k">dyn</span><span class="w"> </span><span class="n">Write</span><span class="p">,</span><span class="w"> </span><span class="n">value</span>: <span class="kt">u8</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">buf</span>: <span class="p">[</span><span class="kt">u8</span><span class="p">;</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="n">value</span><span class="p">];</span>
+<span class="w">    </span><span class="n">w</span><span class="p">.</span><span class="n">write_all</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">buf</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+<p>It can be called with standard output as the writer like this:</p>
+<div class="highlight"><pre><span></span><span class="n">write_trait_object</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">std</span>::<span class="n">io</span>::<span class="n">stdout</span><span class="p">(),</span><span class="w"> </span><span class="sc">b'#'</span><span class="p">);</span>
+<span class="n">write_trait_object</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">std</span>::<span class="n">io</span>::<span class="n">stdout</span><span class="p">(),</span><span class="w"> </span><span class="sc">b'\n'</span><span class="p">);</span>
+</pre></div>
+<p>The differences to our earlier function <code>write&lt;W: Write&gt;(...)</code> are:</p>
+<ul>
+<li>Only one version of the function exists for all types in machine code, so the size of the compiled program might be lower.</li>
+<li>Due to dynamic dispatch at runtime, there may be a small performance penalty. Moreover, the compiler cannot perform optimizations for specific types that the function is used with. This could harm performance and increase the size of the compiled program.</li>
+</ul>
+<p>It can be tempting to use static dispatch and have the compiler generate optimal code for each type to improve the performance, but adding type annotations to functions and structs also has costs. In particular, it can harm developer productivity if done too excessively. The other day, I read a <a href="https://jmmv.dev/2023/08/rust-static-dispatch-failed-experiment.html">very interesting blog post about a refactoring to static dispatch that the author considered a mistake</a>.<a href="#fnref:trait-objects">↩</a></p>
+</li>
+<li>
+<p><span id="fn:type-deduction">Note</span> that we do not have to state the type <code>Vec&lt;u8&gt;</code> explicitly when we create the Vec with <code>Vec::new()</code>. We could do it in two different ways:</p>
+<div class="highlight"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">data</span>: <span class="nb">Vec</span><span class="o">&lt;</span><span class="kt">u8</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Vec</span>::<span class="n">new</span><span class="p">();</span>
+</pre></div>
+<p>or</p>
+<div class="highlight"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Vec</span>::<span class="o">&lt;</span><span class="kt">u8</span><span class="o">&gt;</span>::<span class="n">new</span><span class="p">();</span>
+</pre></div>
+<p>But the Rust compiler will deduce the type automatically here because we call the <code>write(...)</code> method of the <code>Write</code> trait on it, which <code>Vec&lt;T&gt;</code> only implements for <code>T</code> is <code>u8</code>.<a href="#fnref:type-deduction">↩</a></p>
+</li>
+<li>
+<p><span id="fn:variable-scope">I</span> have wrapped the code in this cell in braces (<code>{...}</code>) because compilation will fail with this error otherwise:</p>
+<p><code>Error: The variable input contains a reference with a non-static lifetime so can't be persisted. You can prevent this error by making sure that the variable goes out of scope - i.e. wrapping the code in {}.</code></p>
+<p>You would not have this problem outside a Jupyter notebook, because then <code>input</code> would have a well-define life time.</p>
+<p>Another way to fix this issue besides the braces would be to redefine the variable <code>input</code>:</p>
+<div class="highlight"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+</pre></div>
+<p>Then the old variable <code>input</code> would also go out of scope. In Rust, variable names can be reused in the same scope, which can be confusing at first. I found this feature quite useful though after I got used to it.<a href="#fnref:variable-scope">↩</a></p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+    </div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../../../../categories/rust/" rel="tag">rust</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../../../02/04/brainfuck-interpreter-in-rust-part1/" rel="prev" title="Learn Rust by building a Brainfuck interpreter, part 1: implement the tape and model the program as an abstract syntax tree">Previous post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+        
+    
+<div id="comment-section"></div>
+
+
+<div id="respond">
+<form id="comment-form" method="post" class="" action="https://staticman-freininghaus.onrender.com/v3/entry/github/freininghaus/freininghaus.github.io/main/comments">
+
+<fieldset id="comments-fieldset">
+<input type="hidden" name="options[origin]" value="posts/2024-03-31-brainfuck-interpreter-in-rust-part2/rust-bf-part-2.ipynb"><input type="hidden" id="comment-replying-to-uid" name="fields[replying-to-id]" value=""><input type="hidden" name="options[title]" value="Learn Rust by building a Brainfuck interpreter, part 2: the execution engine"><div class="form-group mt-4">
+    <label for="comment-form-message"><h3>Add Comment</h3></label>
+    <textarea class="form-control" name="fields[message]" type="text" id="comment-form-message" placeholder="Your comment (markdown accepted)" required rows="6"></textarea>
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-name">Name</label>
+    <input class="form-control" name="fields[author]" type="text" id="comment-form-name" placeholder="Your name (required)" required>
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-email">E-mail</label>
+    <input class="form-control" name="fields[email]" type="email" id="comment-form-email" placeholder="Your email (optional)">
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-email">Website</label>
+    <input class="form-control" name="fields[url]" type="url" id="comment-form-url" placeholder="Link to your website (optional)">
+</div>
+
+  <div class="form-group" style="display:none;">
+    <label for="hp">Hp</label>
+    <input class="form-control" name="fields[hp]" id="hp" type="text" placeholder="Leave blank">
+</div>
+
+
+  <button class="btn btn-primary" id="comment-form-submit">
+    Submit comment
+  </button>
+
+</fieldset>
+</form>
+</div>
+
+<div class="modal" id="comments-modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="comments-modal-title"></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="comments-modal-text"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- script for moving the comment form next to a comment for replies -->
+<script src="../../../../../assets/js/staticman_comments.js"></script><!-- icon for the button while comment submission is in progress --><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><symbol id="icon-loading" viewbox="149.8 37.8 499.818 525"><path d="M557.8 187.8c13.8 0 24.601-10.8 24.601-24.6S571.6 138.6 557.8 138.6s-24.6 10.8-24.6 24.6c0 13.2 10.8 24.6 24.6 24.6zm61.2 90.6c-16.8 0-30.6 13.8-30.6 30.6s13.8 30.6 30.6 30.6 30.6-13.8 30.6-30.6c.6-16.8-13.2-30.6-30.6-30.6zm-61.2 145.2c-20.399 0-36.6 16.2-36.6 36.601 0 20.399 16.2 36.6 36.6 36.6 20.4 0 36.601-16.2 36.601-36.6C595 439.8 578.2 423.6 557.8 423.6zM409 476.4c-24 0-43.2 19.199-43.2 43.199s19.2 43.2 43.2 43.2 43.2-19.2 43.2-43.2S433 476.4 409 476.4zM260.8 411c-27 0-49.2 22.2-49.2 49.2s22.2 49.2 49.2 49.2 49.2-22.2 49.2-49.2-22.2-49.2-49.2-49.2zm-10.2-102c0-27.6-22.8-50.4-50.4-50.4-27.6 0-50.4 22.8-50.4 50.4 0 27.6 22.8 50.4 50.4 50.4 27.6 0 50.4-22.2 50.4-50.4zm10.2-199.8c-30 0-54 24-54 54s24 54 54 54 54-24 54-54-24.6-54-54-54zM409 37.8c-35.4 0-63.6 28.8-63.6 63.6S374.2 165 409 165s63.6-28.8 63.6-63.6-28.2-63.6-63.6-63.6z"></path></symbol></svg></section><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" integrity="sha384-3lJUsx1TJHt7BA4udB5KPnDrlkO8T6J6v/op7ui0BbCjvZ9WqV4Xm6DTP6kQ/iBH" crossorigin="anonymous"></script><script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$latex ','$'], ['\\(','\\)']]}});
+        </script></article><!--End of body content--><footer id="footer">
+            Contents © 2024         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+            
+        </footer>
+</div>
+</div>
+
+
+            <script src="../../../../../assets/js/jquery.min.js"></script><script src="../../../../../assets/js/popper.min.js"></script><script src="../../../../../assets/js/bootstrap.min.js"></script><script src="../../../../../assets/js/baguetteBox.min.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>
