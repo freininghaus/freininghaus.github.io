@@ -18,7 +18,7 @@
 <meta name="generator" content="Nikola (getnikola.com)">
 <link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="rss.xml">
 <link rel="canonical" href="https://freininghaus.github.io/">
-<!--[if lt IE 9]><script src="assets/js/html5.js"></script><![endif]--><link rel="prefetch" href="blog/2024/03/31/brainfuck-interpreter-in-rust-part2/" type="text/html">
+<!--[if lt IE 9]><script src="assets/js/html5.js"></script><![endif]--><link rel="prefetch" href="blog/2024/04/XX/brainfuck-interpreter-in-rust-part3/" type="text/html">
 </head>
 <body>
 <a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
@@ -76,7 +76,52 @@ bg-dark
 
     
 <div class="postindex">
-    <article class="h-entry post-text" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title"><a href="blog/2024/03/31/brainfuck-interpreter-in-rust-part2/" class="u-url">Learn Rust by building a Brainfuck interpreter, part 2: the execution engine</a></h1>
+    <article class="h-entry post-text" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title"><a href="blog/2024/04/XX/brainfuck-interpreter-in-rust-part3/" class="u-url">Learn Rust by building a Brainfuck interpreter, part 3: how you should not build a parser</a></h1>
+        <div class="metadata">
+            <p class="byline author vcard"><span class="byline-name fn" itemprop="author">
+                Frank Reininghaus
+            </span></p>
+            <p class="dateline">
+            <a href="blog/2024/04/XX/brainfuck-interpreter-in-rust-part3/" rel="bookmark">
+            <time class="published dt-published" datetime="2024-05-14T21:03:14Z" itemprop="datePublished" title="2024-05-14">2024-05-14</time></a>
+            </p>
+                <p class="commentline">
+    
+<a href="blog/2024/04/XX/brainfuck-interpreter-in-rust-part3/#comment-section">Comments</a>
+
+
+        </p>
+</div>
+    </header><div class="p-summary entry-summary">
+    <div class="cell border-box-sizing text_cell rendered" id="cell-id=3f87b73d-99f3-4333-9e03-0278d843336b">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Introduction">Introduction<a class="anchor-link" href="blog/2024/04/XX/brainfuck-interpreter-in-rust-part3/#Introduction">¶</a>
+</h3>
+<p>This is the third post in a series that builds a Brainfuck interpreter in Rust.</p>
+<ul>
+<li>In the <a href="blog/2024/02/04/brainfuck-interpreter-in-rust-part1">first post</a>, we created the first building blocks for our Brainfuck interpreter in Rust: a data structure for the tape, and a data type for the instructions. The instructions are based on Rust's enums, which allow to build powerful <a href="https://en.wikipedia.org/wiki/Algebraic_data_type">algebraic data types</a>.</li>
+<li>In the <a href="blog/2024/03/31/brainfuck-interpreter-in-rust-part2">second post</a>, we built an execution engine that can execute a Brainfuck program which is represented by an <a href="https://en.wikipedia.org/wiki/Abstract_syntax_tree">abstract syntax tree</a> in the context of a tape. We used the <code>Read</code> and <code>Write</code> traits to make our execution function generic, such that we could not only read from standard input and write to standard output, but also, e.g., read from byte slices and write to a vector of bytes. This makes unit testing easy.</li>
+</ul>
+<p>Currently, we can only execute programs which are given as abstract syntax trees in Rust data structures, such as this one:</p>
+<div class="highlight"><pre><span></span><span class="c1">// read two byte values and write their sum</span>
+<span class="fm">vec!</span><span class="p">[</span>
+<span class="w">    </span><span class="n">Read</span><span class="p">,</span><span class="w"> </span><span class="n">Right</span><span class="p">,</span><span class="w"> </span><span class="n">Read</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="n">Dec</span><span class="p">,</span><span class="w"> </span><span class="n">Left</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Right</span><span class="p">]),</span>
+<span class="w">    </span><span class="n">Left</span><span class="p">,</span><span class="w"> </span><span class="n">Write</span>
+<span class="p">];</span>
+</pre></div>
+<p>This corresponds to <code>,&gt;,[-&lt;+&gt;]&lt;.</code> in Brainfuck source code.</p>
+<p>In the current post, we will find ways to transform the latter into the former, i.e., to parse Brainfuck source code and generate an abstract syntax tree.</p>
+<p><em><strong>Please note:</strong></em> <em>I intentionally did this without using libraries because I wanted to build a simple parser from scratch. Since I learned a lot this way, I found it appropriate to write a blog post about the process. However, building a parser with the help of libraries that are designed for this purpose is <strong>much</strong> easier and less error-prone. In a future post in this series, we will implement a better parser using the <a href="https://docs.rs/nom/latest/nom/">Rust crate nom</a>.</em></p>
+<p class="more"><a href="blog/2024/04/XX/brainfuck-interpreter-in-rust-part3/">Read more…</a></p>
+</div>
+</div>
+</div>
+    </div>
+    </article><article class="h-entry post-text" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title"><a href="blog/2024/03/31/brainfuck-interpreter-in-rust-part2/" class="u-url">Learn Rust by building a Brainfuck interpreter, part 2: the execution engine</a></h1>
         <div class="metadata">
             <p class="byline author vcard"><span class="byline-name fn" itemprop="author">
                 Frank Reininghaus

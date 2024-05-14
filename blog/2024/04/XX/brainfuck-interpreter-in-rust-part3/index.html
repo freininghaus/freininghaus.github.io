@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn Rust by building a Brainfuck interpreter, part 3: how you should not build a parser | Frank Reininghaus</title>
+<link href="../../../../../assets/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/baguetteBox.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/rst.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/code.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/theme.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/custom.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/ipython.min.css" rel="stylesheet" type="text/css">
+<link href="../../../../../assets/css/nikola_ipython.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../../../../rss.xml">
+<link rel="canonical" href="https://freininghaus.github.io/blog/2024/04/XX/brainfuck-interpreter-in-rust-part3/">
+<!--[if lt IE 9]><script src="../../../../../../../../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Frank Reininghaus">
+<link rel="prev" href="../../../03/31/brainfuck-interpreter-in-rust-part2/" title="Learn Rust by building a Brainfuck interpreter, part 2: the execution engine" type="text/html">
+<meta property="og:site_name" content="Frank Reininghaus">
+<meta property="og:title" content="Learn Rust by building a Brainfuck interpreter, part 3: how you should">
+<meta property="og:url" content="https://freininghaus.github.io/blog/2024/04/XX/brainfuck-interpreter-in-rust-part3/">
+<meta property="og:description" content="Introduction¶This is the third post in a series that builds a Brainfuck interpreter in Rust.
+
+In the first post, we created the first building blocks for our Brainfuck interpreter in Rust: a data stru">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2024-05-14T21:03:14Z">
+<meta property="article:tag" content="rust">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../../../../">
+
+            <span id="blog-title">Frank Reininghaus</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../../../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../../../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../../../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+<a href="../../../../../pages/about/" class="nav-link">About</a>
+
+                
+                
+                    
+    
+    </li>
+<li class="nav-item">
+    <a href="index.ipynb" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+        
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Learn Rust by building a Brainfuck interpreter, part 3: how you should not build a parser</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Frank Reininghaus
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2024-05-14T21:03:14Z" itemprop="datePublished" title="2024-05-14">2024-05-14</time></a>
+            </p>
+                <p class="commentline">
+    
+<a href="#comment-section">Comments</a>
+
+
+            
+        </p>
+<p class="sourceline"><a href="index.ipynb" class="sourcelink">Source</a></p>
+
+        </div>
+        
+
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <div class="cell border-box-sizing text_cell rendered" id="cell-id=3f87b73d-99f3-4333-9e03-0278d843336b">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Introduction">Introduction<a class="anchor-link" href="#Introduction">¶</a>
+</h3>
+<p>This is the third post in a series that builds a Brainfuck interpreter in Rust.</p>
+<ul>
+<li>In the <a href="../../../02/04/brainfuck-interpreter-in-rust-part1">first post</a>, we created the first building blocks for our Brainfuck interpreter in Rust: a data structure for the tape, and a data type for the instructions. The instructions are based on Rust's enums, which allow to build powerful <a href="https://en.wikipedia.org/wiki/Algebraic_data_type">algebraic data types</a>.</li>
+<li>In the <a href="../../../03/31/brainfuck-interpreter-in-rust-part2">second post</a>, we built an execution engine that can execute a Brainfuck program which is represented by an <a href="https://en.wikipedia.org/wiki/Abstract_syntax_tree">abstract syntax tree</a> in the context of a tape. We used the <code>Read</code> and <code>Write</code> traits to make our execution function generic, such that we could not only read from standard input and write to standard output, but also, e.g., read from byte slices and write to a vector of bytes. This makes unit testing easy.</li>
+</ul>
+<p>Currently, we can only execute programs which are given as abstract syntax trees in Rust data structures, such as this one:</p>
+<div class="highlight"><pre><span></span><span class="c1">// read two byte values and write their sum</span>
+<span class="fm">vec!</span><span class="p">[</span>
+<span class="w">    </span><span class="n">Read</span><span class="p">,</span><span class="w"> </span><span class="n">Right</span><span class="p">,</span><span class="w"> </span><span class="n">Read</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="n">Dec</span><span class="p">,</span><span class="w"> </span><span class="n">Left</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Right</span><span class="p">]),</span>
+<span class="w">    </span><span class="n">Left</span><span class="p">,</span><span class="w"> </span><span class="n">Write</span>
+<span class="p">];</span>
+</pre></div>
+<p>This corresponds to <code>,&gt;,[-&lt;+&gt;]&lt;.</code> in Brainfuck source code.</p>
+<p>In the current post, we will find ways to transform the latter into the former, i.e., to parse Brainfuck source code and generate an abstract syntax tree.</p>
+<p><em><strong>Please note:</strong></em> <em>I intentionally did this without using libraries because I wanted to build a simple parser from scratch. Since I learned a lot this way, I found it appropriate to write a blog post about the process. However, building a parser with the help of libraries that are designed for this purpose is <strong>much</strong> easier and less error-prone. In a future post in this series, we will implement a better parser using the <a href="https://docs.rs/nom/latest/nom/">Rust crate nom</a>.</em></p>
+<!-- TEASER_END -->
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=f22fb8fb-3e43-44f9-b31b-9b6577a1dfd0">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Importing-what-we-did-so-far-into-a-Jupyter-notebook">Importing what we did so far into a Jupyter notebook<a class="anchor-link" href="#Importing-what-we-did-so-far-into-a-Jupyter-notebook">¶</a>
+</h3>
+<p>I've taken the code from the <a href="https://github.com/freininghaus/freininghaus.github.io/blob/main/posts/2024-02-04-brainfuck-interpreter-in-rust-part1/rust-bf-part1.ipynb">Jupyter</a> <a href="https://github.com/freininghaus/freininghaus.github.io/blob/main/posts/2024-03-31-brainfuck-interpreter-in-rust-part2/rust-bf-part-2.ipynb">notebooks</a> that the first posts in this series were based on, and copied it to proper Rust files <a href="https://github.com/freininghaus/freininghaus.github.io/tree/main/posts/2024-05-14-brainfuck-interpreter-in-rust-part3/src">in the directory for the new blog post</a>.</p>
+<p>Just like in the last post, we will import these into the Jupyter notebook that is the source of the current blog post:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=db221ef7-c909-4b52-8703-b06f05a4095f">
+<div class="input">
+<div class="prompt input_prompt">In [2]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="p">:</span><span class="nc">dep</span><span class="w"> </span><span class="n">rust_bf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"rust-bf"</span><span class="p">,</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"."</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span>
+<span class="k">use</span><span class="w"> </span><span class="n">rust_bf</span><span class="p">::{</span><span class="n">instructions</span><span class="p">::{</span><span class="n">Instruction</span><span class="p">,</span><span class="w"> </span><span class="n">Instruction</span><span class="p">::</span><span class="o">*</span><span class="p">},</span><span class="w"> </span><span class="n">tape</span><span class="p">::</span><span class="n">Tape</span><span class="p">,</span><span class="w"> </span><span class="n">executor</span><span class="p">::</span><span class="n">execute</span><span class="p">};</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=732e3ecf-9388-4d09-ba21-5c85b23461ea">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>A small extension compared to the last post is that the function that executes Brainfuck code now creates an empty Tape, so we can run programs more easily. We'll show this with a somewhat silly example program that reads a number $n$, then reads $n$ bytes, decreases each of them by one, and writes them. Finally, it writes a newline character (<code>\n</code>):</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=a068a458-70aa-4a6e-b02f-0f2fd79a023c">
+<div class="input">
+<div class="prompt input_prompt">In [3]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">transform_input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="fm">vec!</span><span class="p">[</span>
+<span class="w">    </span><span class="c1">// read number of items (n)</span>
+<span class="w">    </span><span class="n">Read</span><span class="p">,</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span>
+<span class="w">        </span><span class="c1">// decrease n by one</span>
+<span class="w">        </span><span class="n">Dec</span><span class="p">,</span><span class="w"> </span>
+
+<span class="w">        </span><span class="c1">// go right, read input, decrease by one, write output, go left</span>
+<span class="w">        </span><span class="n">Right</span><span class="p">,</span><span class="w"> </span><span class="n">Read</span><span class="p">,</span><span class="w"> </span><span class="n">Dec</span><span class="p">,</span><span class="w"> </span><span class="n">Write</span><span class="p">,</span><span class="w"> </span><span class="n">Left</span>
+<span class="w">    </span><span class="p">]),</span><span class="w"> </span>
+
+<span class="w">    </span><span class="c1">// set current cell to 10 (ASCII code for newline, \n)</span>
+<span class="w">    </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span><span class="w"> </span><span class="n">Inc</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">// write output</span>
+<span class="w">    </span><span class="n">Write</span>
+<span class="p">];</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=26dd4d96-45a7-4915-bce8-c25724158b39">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We will now execute this program and see what it does with the byte sequence <code>b"\x0cIfmmp!Xpsme\""</code> as input:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=701dfc03-2098-4add-83a1-a31cbe1751f5">
+<div class="input">
+<div class="prompt input_prompt">In [4]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">encrypted_message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">b"</span><span class="se">\x0c</span><span class="s">Ifmmp!Xpsme</span><span class="se">\"</span><span class="s">"</span><span class="p">;</span>
+<span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">m</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">encrypted_message</span><span class="p">;</span>
+<span class="n">execute</span><span class="p">(</span><span class="o">&amp;</span><span class="n">transform_input</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">io</span><span class="p">::</span><span class="n">stdout</span><span class="p">());</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Hello World!
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=1e15189a-45cc-422e-bb1e-94ee62f21af9">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>So the value of <code>encrypted_message</code> is just the input that <code>transform_input</code> needs to output "Hello world!".</p>
+<p>With the generic function <code>execute</code>, we can mix and match input and output objects as long as they implement the traits <code>Read</code> and <code>Write</code>, respectively. In particular, we can collect the output in a <code>Vec&lt;u8&gt;</code>, i.e., a vector of bytes. The following function will be useful, which uses a byte slice as input and writes the output both as a byte slice and as a string if the bytes contain valid UTF-8 data:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=d6d3f67d-fdc3-43ca-ae7d-26c5c96eaefd">
+<div class="input">
+<div class="prompt input_prompt">In [5]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">execute_with_input</span><span class="p">(</span><span class="n">program</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="n">Instruction</span><span class="p">],</span><span class="w"> </span><span class="n">input</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Vec</span><span class="p">::</span><span class="n">new</span><span class="p">();</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">input</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">input</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">execute</span><span class="p">(</span><span class="n">program</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">output</span><span class="p">);</span>
+
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"Output as bytes: {:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">output</span><span class="p">);</span>
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"Output as str:   {:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="kt">str</span><span class="p">::</span><span class="n">from_utf8</span><span class="p">(</span><span class="o">&amp;</span><span class="n">output</span><span class="p">));</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=dc169d1e-7cfc-44e4-866d-a1fdcb4b54a5">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We will test it with the program <code>transform_output</code> and the encrypted message from above:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=cda6cf9e-876f-450f-b4c7-ce272bb9fff2">
+<div class="input">
+<div class="prompt input_prompt">In [6]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">execute_with_input</span><span class="p">(</span><span class="o">&amp;</span><span class="n">transform_input</span><span class="p">,</span><span class="w"> </span><span class="n">encrypted_message</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output as bytes: [72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33, 10]
+Output as str:   Ok("Hello World!\n")
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=732ccaf8-6ce4-48dc-954a-ced11a920975">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Step-1:-parse-programs-without-loops">Step 1: parse programs without loops<a class="anchor-link" href="#Step-1:-parse-programs-without-loops">¶</a>
+</h3>
+<p>Since the hardest part of parsing Brainfuck code is to handle loops properly, we will start simple and first parse loop-less programs. A simple example is a variant of <code>transform_input</code> which does not read the byte count, but uses a hard-coded number of input bytes instead. Then we can unroll the loop. For 12 input bytes, which happens to be the length of the string <code>Hello World!</code>, this is equivalent to the following source code. Note that all characters which are not mapped to Brainfuck instructions are considered comments:<a href="#fn:source-code-with-bytes-rather-than-strings"><sup id="fnref:source-code-with-bytes-rather-than-strings">1</sup></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=80b1f9f7-d777-4992-825f-3a436a8ffcc1">
+<div class="input">
+<div class="prompt input_prompt">In [7]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">transform_12_input_bytes_source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>
+<span class="s">b"  ,-.         Repeat 12 times:</span>
+<span class="s">    ,-.         * read a number</span>
+<span class="s">    ,-.         * decrease by one</span>
+<span class="s">    ,-.         * write it</span>
+<span class="s">    ,-.</span>
+<span class="s">    ,-.</span>
+<span class="s">    ,-.</span>
+<span class="s">    ,-.</span>
+<span class="s">    ,-.</span>
+<span class="s">    ,-.</span>
+<span class="s">    ,-.</span>
+<span class="s">    ,-.</span>
+
+<span class="s">    &gt;           go right to an empty cell</span>
+<span class="s">    ++++++++++  store 10 (</span><span class="se">\n</span><span class="s">)</span>
+<span class="s">    .           write output</span>
+<span class="s">"</span><span class="p">;</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=01f9ce74-ada5-42c1-a96e-d93f694b5c93">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We will split the parsing process into two functions, the first of which takes a single input character and returns an <em>optional</em> instruction:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=6e46ea0e-4a65-4d90-96a7-9eabbe0c7711">
+<div class="input">
+<div class="prompt input_prompt">In [8]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">parse_simple_instruction</span><span class="p">(</span><span class="n">c</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">u8</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Option</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">match</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="sc">b'&lt;'</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">Left</span><span class="p">),</span>
+<span class="w">        </span><span class="sc">b'&gt;'</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">Right</span><span class="p">),</span>
+<span class="w">        </span><span class="sc">b'+'</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">Inc</span><span class="p">),</span>
+<span class="w">        </span><span class="sc">b'-'</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">Dec</span><span class="p">),</span>
+<span class="w">        </span><span class="sc">b','</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">Read</span><span class="p">),</span>
+<span class="w">        </span><span class="sc">b'.'</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">Write</span><span class="p">),</span>
+<span class="w">        </span><span class="sc">b'['</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="sc">b']'</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="fm">panic!</span><span class="p">(</span><span class="s">"parse_simple_instruction cannot handle loops"</span><span class="p">),</span>
+<span class="w">        </span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">None</span><span class="w">  </span><span class="c1">// everything else is a comment</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=34df31fe-f257-4b85-b9ce-22d57c12f280">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a href="https://doc.rust-lang.org/std/option/enum.Option.html"><code>Option&lt;T&gt;</code></a> is an enum which has the two variants</p>
+<ul>
+<li>
+<code>None</code>, which corresponds to an empty value,</li>
+<li>
+<code>Some(T)</code>, which holds a value of type <code>T</code>.</li>
+</ul>
+<p>This concept will look familiar to readers who have used optional values in other languages, like, e.g., <a href="https://en.cppreference.com/w/cpp/utility/optional"><code>std::optional</code> in C++</a> or <a href="https://wiki.haskell.org/Maybe"><code>Maybe</code> in Haskell</a>.<a href="#fn:java-null-optional"><sup id="fnref:java-null-optional">2</sup></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=07fbb166-ff49-4af2-b654-6077261e9332">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We want to apply this function to every character in the Brainfuck source code. This could be done with a <code>for</code> loop, but it is easier to make use of iterators by applying a sequence of functions to transform the source into the result that we want. I will not describe the basics of iterators in great detail here (see the <a href="https://doc.rust-lang.org/book/ch13-02-iterators.html">relevant chapter in The Rust Programming Language</a> or the <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html">standard library documentation</a>), but much of what you can do with iterators should be easy to follow for readers who have experience with, e.g., streams in Java, ranges in C++, list transformations in Haskell, or similar constructs in other languages. Here we parse a small Brainfuck source snippet including comments:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=5ca366cc-573c-425a-9b28-809cf719c544">
+<div class="input">
+<div class="prompt input_prompt">In [9]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="o">&amp;</span><span class="s">b".-, comment"</span>
+<span class="w">    </span><span class="p">.</span><span class="n">iter</span><span class="p">()</span>
+<span class="w">    </span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">parse_simple_instruction</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">collect</span><span class="p">::</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">_</span><span class="o">&gt;&gt;</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[9]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>[Some(Write), Some(Dec), Some(Read), None, None, None, None, None, None, None, None]</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=1e651f71-1dda-4a1f-af92-7dfab27881cd">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<ul>
+<li>
+<code>.iter()</code> creates an iterator that allows to iterate through the input bytes,</li>
+<li>
+<code>.map(parse_simple_instruction)</code> applies the function above to each element,</li>
+<li>
+<code>.collect::&lt;Vec&lt;_&gt;&gt;()</code> collects the transformed elements into a <code>Vec</code>. Note that the element type need not be specified because the compiler can deduce that it is <code>Option&lt;Instruction&gt;</code>.</li>
+</ul>
+<p>We see that parsing the instructions worked. It's just a bit inconvenient that the handling of comments results in each instruction being wrapped in <code>Some</code>, and that the <code>None</code> values from comments and whitespace are in the result.</p>
+<p>We could fix this by</p>
+<ul>
+<li>First filtering out the <code>None</code> values. In the code snippet below, this is done with a <em>closure</em> that calls the <a href="https://doc.rust-lang.org/std/option/enum.Option.html#method.is_some"><code>is_some</code> member of <code>Option</code></a>. We could also have defined a separate function (as we did with <code>parse_simple_instruction</code>) for this purpose, but using a small anonymous function (also called <em>lambda</em> in other languages) is often easier.</li>
+<li>And then unwrapping the instructions from <code>Some(...)</code>. This works similarly to unwrapping valid results from the <code>Ok</code> variant of <code>Result</code>, which we did in the <a href="../../../03/31/brainfuck-interpreter-in-rust-part2">previous post in this series</a>:</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=607ff4e5-09c3-4ac6-b513-a06a2349b729">
+<div class="input">
+<div class="prompt input_prompt">In [10]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="s">b".-, comment"</span>
+<span class="w">    </span><span class="p">.</span><span class="n">iter</span><span class="p">()</span>
+<span class="w">    </span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">parse_simple_instruction</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">filter</span><span class="p">(</span><span class="o">|</span><span class="n">opt</span><span class="o">|</span><span class="w"> </span><span class="n">opt</span><span class="p">.</span><span class="n">is_some</span><span class="p">())</span>
+<span class="w">    </span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="o">|</span><span class="n">opt</span><span class="o">|</span><span class="w"> </span><span class="n">opt</span><span class="p">.</span><span class="n">unwrap</span><span class="p">())</span>
+<span class="w">    </span><span class="p">.</span><span class="n">collect</span><span class="p">::</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">_</span><span class="o">&gt;&gt;</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[10]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>[Write, Dec, Read]</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=aedac3ab-1ca8-4913-a6cb-9e16fba0b152">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>This works just fine, but the following solution is a bit more elegant:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=2a2785c9-64a5-457b-acc9-3a66042d4fe4">
+<div class="input">
+<div class="prompt input_prompt">In [11]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="s">b".-, comment"</span>
+<span class="w">    </span><span class="p">.</span><span class="n">iter</span><span class="p">()</span>
+<span class="w">    </span><span class="p">.</span><span class="n">filter_map</span><span class="p">(</span><span class="n">parse_simple_instruction</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">collect</span><span class="p">::</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">_</span><span class="o">&gt;&gt;</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[11]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>[Write, Dec, Read]</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=7bafeaed-2598-4e04-97e9-4949bdd04571">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.filter_map"><code>filter_map</code></a> is a member of <code>Iterator</code> that does just what we need:</p>
+<ul>
+<li>it applies the given function,</li>
+<li>it discards the <code>None</code> values,</li>
+<li>and it unwraps each value that is wrapped in <code>Some(...)</code>.</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=74f0d276-1ac7-445f-a2e6-f9c686e48ab0">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now we can build a function that can parse any Brainfuck program without loops. Note that we do not have to specify that <code>.collect()</code> shall collect the resulting iterator into a <code>Vec</code> because the compiler deduces this from the return type of the function:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=561122ef-90b3-4ad9-ac3e-e8a6593c65b7">
+<div class="input">
+<div class="prompt input_prompt">In [12]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">parse_program_without_loops</span><span class="p">(</span><span class="n">input</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">])</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">input</span><span class="p">.</span><span class="n">iter</span><span class="p">()</span>
+<span class="w">        </span><span class="p">.</span><span class="n">filter_map</span><span class="p">(</span><span class="o">|</span><span class="n">c</span><span class="o">|</span><span class="w"> </span><span class="n">parse_simple_instruction</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+<span class="w">        </span><span class="p">.</span><span class="n">collect</span><span class="p">()</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=ff49c381-2100-464a-8928-c124009b2c7c">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We will now parse the 12 byte transformation program above and execute it to verify that it works:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=bc8ef603-38ae-4e0d-bde0-a1b5f7397bd7">
+<div class="input">
+<div class="prompt input_prompt">In [13]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">transform_12_input_bytes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parse_program_without_loops</span><span class="p">(</span><span class="n">transform_12_input_bytes_source</span><span class="p">);</span>
+<span class="n">execute_with_input</span><span class="p">(</span><span class="o">&amp;</span><span class="n">transform_12_input_bytes</span><span class="p">,</span><span class="w"> </span><span class="s">b"Ifmmp!Xpsme</span><span class="se">\"</span><span class="s">"</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output as bytes: [72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33, 10]
+Output as str:   Ok("Hello World!\n")
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=06eac4b8-4444-4b4d-89aa-a04465381fa1">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Step-2:-parse-programs-with-loops">Step 2: parse programs with loops<a class="anchor-link" href="#Step-2:-parse-programs-with-loops">¶</a>
+</h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=e4483ce3-05a5-4681-9a2d-5d86934c9e49">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>One interesting aspect of loops is that each instruction that starts a loop, <code>[</code>, must have a matching loop end, <code>]</code>, and vice versa. Therefore, not every combination of characters forms a valid Brainfuck program, and it would be good if our parser could detect invalid programs and report the first error in the source code.</p>
+<p>There are two possible kinds of errors:</p>
+<ul>
+<li>There could be an unmatched loop end, i.e., a <code>]</code> where no loop was currently active. In this case, we will report the index of the unexpected <code>]</code> in the sequence of source bytes.</li>
+<li>There could be an unmatched <code>[</code>. This error could be fixed by adding an <code>]</code> at the end, so we will just report "missing loop end at end of input". We could also try to find out the index of the unmatched <code>[</code>, but this would complicate the parsing code. We will see in a future post that this is much easier when using the <a href="https://docs.rs/nom/latest/nom/">nom</a> crate for parsing.</li>
+</ul>
+<p>We will use an enum to represent the different error conditions:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=731b1dcf-b63b-4fa3-9690-e0ffd9410a6c">
+<div class="input">
+<div class="prompt input_prompt">In [14]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="cp">#[derive(Debug)]</span>
+<span class="k">enum</span><span class="w"> </span><span class="nc">ParseError</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">MissingLoopEndAtEndOfInput</span><span class="p">,</span>
+<span class="w">    </span><span class="n">UnexpectedLoopEnd</span><span class="p">(</span><span class="kt">usize</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=95fff9a0-d74d-4e89-b38a-9d3b748035ab">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>To build a full Brainfuck parser, we will complement the function <code>parse_simple_instruction</code> with three more functions:</p>
+<ul>
+<li>
+<code>parse_next_instruction</code> parses a single instruction, which can either be a simple instruction, or a loop.</li>
+<li>
+<code>parse_loop_body</code> parses the body of a loop, i.e., the code between <code>[</code> and <code>]</code>.</li>
+<li>
+<code>parse</code> parses an entire Brainfuck program.</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=e8cdda3c-68a2-4f32-9fe2-0962a31f35d9">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>These functions all have a similar signature, which we will discuss in a minute:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=6d6d8e8f-f8e9-48be-a1ad-d87fdcbf5fd9">
+<div class="input">
+<div class="prompt input_prompt">In [15]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">parse_next_instruction</span><span class="p">(</span><span class="n">source</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">])</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="p">(</span><span class="nb">Option</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">]),</span><span class="w"> </span><span class="n">ParseError</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="fm">todo!</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="k">fn</span><span class="w"> </span><span class="nf">parse_loop_body</span><span class="p">(</span><span class="n">source</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">])</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="p">(</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">]),</span><span class="w"> </span><span class="n">ParseError</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="fm">todo!</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="k">fn</span><span class="w"> </span><span class="nf">parse</span><span class="p">(</span><span class="n">source</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">])</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="p">(</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="p">),</span><span class="w"> </span><span class="n">ParseError</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="fm">todo!</span><span class="p">()</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=c782457f-748c-492c-9e6a-34a079fb1f6c">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<ul>
+<li>They take a byte slice, <code>&amp;[u8]</code>, as the single argument. This is the source code which still needs to be parsed.</li>
+<li>They return a <code>Result</code>, depending on whether parsing was successful or not.</li>
+<li>The <code>Err</code> variant contains a <code>ParseError</code> which tells what the problem is.</li>
+<li>The <code>Ok</code> variant contains the instructions which were parsed successfully, i.e.,<ul>
+<li>a <code>Vec&lt;Instruction&gt;</code> for <code>parse</code> and <code>parse_loop_body</code>, and</li>
+<li>an <code>Option&lt;Instruction&gt;</code> for <code>parse_next_instruction</code>, which parses at most one instruction. It will be <code>None</code> if the next byte in <code>source</code> is a comment.</li>
+</ul>
+</li>
+<li>Moreover, since <code>parse_next_instruction</code> and <code>parse_loop_body</code> do not parse the entire program, they also have to return the remaining source code which still has to be parsed. Therefore, these functions return a tuple with two elements in the <code>Ok</code> variant.</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=2b396a5a-9388-4f11-88b3-9c3416344eb2">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Small-digression:-alternatives-to-match-expressions">Small digression: alternatives to <code>match</code> expressions<a class="anchor-link" href="#Small-digression:-alternatives-to-match-expressions">¶</a>
+</h3>
+<p>Since each of the functions that were outlined above returns a <code>Result</code>, and the return value of <code>parse_next_instruction</code> contains an <code>Option&lt;Instruction&gt;</code> which is wrapped in the <code>Result</code>, we have to handle the different variants of these enum values (<code>Ok</code> and <code>Err</code> for <code>Result</code>, <code>Some</code> and <code>None</code> for <code>Some</code>) when these functions call each other.</p>
+<p>In the <a href="../../../03/31/brainfuck-interpreter-in-rust-part2">previous post</a>, we saw how this can be done with <a href="https://doc.rust-lang.org/book/ch06-02-match.html">pattern matching in <code>match</code> expressions</a>. However, there are simpler alternatives to deal with enums in some cases:</p>
+<h4 id="if-let">
+<code>if let</code><a class="anchor-link" href="#if-let">¶</a>
+</h4>
+<p>If we want to execute some code only if an enum value matches a specific pattern, we can use the <code>if let</code> construct. For example, a function that takes a slice of integer values and prints the first value if the slice is not empty could be implemented like this:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=92797e5e-bb0d-4be5-abc5-b33f648b5cc2">
+<div class="input">
+<div class="prompt input_prompt">In [16]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">print_first_if_not_empty</span><span class="p">(</span><span class="n">values</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">i32</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">first</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">values</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">next</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">"First value: {}"</span><span class="p">,</span><span class="w"> </span><span class="n">first</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=50b8e385-537b-4ab2-87bb-c2918a627624">
+<div class="input">
+<div class="prompt input_prompt">In [17]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">print_first_if_not_empty</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[]);</span><span class="w">  </span><span class="c1">// no output</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=bbe34965-bac2-4bb2-9a15-71e64311827e">
+<div class="input">
+<div class="prompt input_prompt">In [18]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">print_first_if_not_empty</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>First value: 3
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=1ca51f39-34c2-472c-9d7f-a917dd00887a">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h4 id="let-else">
+<code>let-else</code><a class="anchor-link" href="#let-else">¶</a>
+</h4>
+<p>Another interesting situation is the following: if a value matches a pattern, then we want to assign a variable based on the value, and use this variable in the remainder of the current code block. Otherwise, we want to leave the current block with something like <code>return</code>, <code>break</code>, <code>continue</code>, or <code>panic!</code>. This can be achieved like this:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=e14f0a1d-c145-4f83-89bb-d69697cdb145">
+<div class="input">
+<div class="prompt input_prompt">In [19]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">double_first_value</span><span class="p">(</span><span class="n">values</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">i32</span><span class="p">])</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Option</span><span class="o">&lt;</span><span class="kt">i32</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">first</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">values</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">next</span><span class="p">()</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="fm">eprintln!</span><span class="p">(</span><span class="s">"No values found."</span><span class="p">);</span><span class="w">  </span><span class="c1">// prints to stderr</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">None</span><span class="p">;</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">first</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=c3be84fe-4eeb-488b-8154-7e8443e3de4e">
+<div class="input">
+<div class="prompt input_prompt">In [20]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">double_first_value</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[])</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>No values found.
+</pre>
+</div>
+</div>
+<div class="output_area">
+<div class="prompt output_prompt">Out[20]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>None</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=648a75e2-9755-42d1-8ec6-9fc3882975d5">
+<div class="input">
+<div class="prompt input_prompt">In [21]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">double_first_value</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[21]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>Some(6)</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=3039fbe6-304b-45a1-8677-369722258d47">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h4 id="Propagating-errors-with-the-?-operator">Propagating errors with the <code>?</code> operator<a class="anchor-link" href="#Propagating-errors-with-the-?-operator">¶</a>
+</h4>
+<p>Sometimes, a function has to handle a <code>Result</code> value where only the <code>Ok</code> variant can be used for further processing in a meaningful way, and an <code>Err</code> should be returned to the caller directly. Similarly, functions which have to handle an <code>Option</code> might not be able to do anything with a <code>None</code> value and want to just pass it to the caller. To express this in a concise way, Rust has the <a href="https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html#a-shortcut-for-propagating-errors-the--operator"><code>?</code> operator</a>.</p>
+<p>A question mark after a <code>Result</code> or <code>Option</code> value will try to unwrap the contained <code>Ok</code> or <code>Some</code> value, respectively, and return any <code>Err</code> or <code>None</code> values to the caller directly.</p>
+<p>A simple example would be a function that doubles an optional integer:<a href="#fn:option-map"><sup id="fnref:option-map">3</sup></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=20614797-359e-42d1-b501-89e42bf8e6be">
+<div class="input">
+<div class="prompt input_prompt">In [22]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">double</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="nb">Option</span><span class="o">&lt;</span><span class="kt">i32</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Option</span><span class="o">&lt;</span><span class="kt">i32</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nb">Some</span><span class="p">(</span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">x</span><span class="o">?</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=2196ca1d-8071-4345-8d6b-dfcdce3fcf11">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>If <code>x</code> is a <code>Some</code> value, then the expression <code>x?</code> will be equal to the contained value. Otherwise, <code>None</code> will be returned from the function immediately:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=902cf06b-fa44-47ef-b392-91ce83a48083">
+<div class="input">
+<div class="prompt input_prompt">In [23]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">double</span><span class="p">(</span><span class="nb">Some</span><span class="p">(</span><span class="mi">4</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[23]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>Some(8)</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=da44d005-cc84-423e-81d8-913c56e7fe29">
+<div class="input">
+<div class="prompt input_prompt">In [24]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">double</span><span class="p">(</span><span class="nb">None</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[24]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>None</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=80c3b314-9052-4e3b-90ef-137b0dbb851b">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Even though it can be used to handle <code>Option</code> values, the <code>?</code> operator is more interesting for <code>Result</code> values:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=13221553-4bce-47e2-9f08-c10aee283e38">
+<div class="input">
+<div class="prompt input_prompt">In [25]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">to_u64</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="kt">f64</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="kt">str</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="kt">u64</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="kt">str</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="kt">f64</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="o">?</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mf">0.0</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="kt">u64</span><span class="p">::</span><span class="n">MAX</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="kt">f64</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nb">Err</span><span class="p">(</span><span class="s">"value outside u64 range"</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nb">Ok</span><span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">round</span><span class="p">()</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="kt">u64</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=f8625b6e-fc16-4647-b51c-66a03f26842a">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><code>Ok</code> values that contain a number will just be unwrapped for further processing:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=897ec15f-c5a0-42a1-b132-da6b140c6397">
+<div class="input">
+<div class="prompt input_prompt">In [26]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">to_u64</span><span class="p">(</span><span class="nb">Ok</span><span class="p">(</span><span class="mf">3.5</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[26]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>Ok(4)</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=b808ea9a-cf33-432d-a094-c31305aaa7b9">
+<div class="input">
+<div class="prompt input_prompt">In [27]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">to_u64</span><span class="p">(</span><span class="nb">Ok</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[27]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>Err("value outside u64 range")</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=436a68d0-1f94-476b-89d7-ee0ac412a7c0">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><code>Err</code> input values will be returned immediately:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=c129ea43-3984-4111-b30a-874f3e768d4a">
+<div class="input">
+<div class="prompt input_prompt">In [28]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">to_u64</span><span class="p">(</span><span class="nb">Err</span><span class="p">(</span><span class="s">"invalid number"</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[28]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>Err("invalid number")</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=90c0d699-901b-4963-83a3-6f5ed6fc33bd">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Implementing-the-functions-for-our-parser">Implementing the functions for our parser<a class="anchor-link" href="#Implementing-the-functions-for-our-parser">¶</a>
+</h3>
+<p>Now that we know how to handle <code>Option</code> and <code>Result</code> values without <code>match</code> expressions, let us start with the implementation of <code>parse_next_instruction</code>. It will be called by the other two functions, but only if there is still something to parse. Moreover, the callers will be responsible for handling loop ends. So we can safely assume that we can extract the first character from the <code>source</code> argument, and that it is not <code>]</code>. We will just panic if these conditions are not fulfilled:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=39fc6f18-3433-4b6b-8088-5d18e7ab0c5d">
+<div class="input">
+<div class="prompt input_prompt">In [29]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">parse_next_instruction</span><span class="p">(</span><span class="n">source</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">])</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="p">(</span><span class="nb">Option</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">]),</span><span class="w"> </span><span class="n">ParseError</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="c1">// Extract first character</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">source</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">next</span><span class="p">()</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="fm">panic!</span><span class="p">(</span><span class="s">"parse_next_instruction() should not be called with an empty source."</span><span class="p">);</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="c1">// Store everything after this character in remaining_source</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">remaining_source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">source</span><span class="p">[</span><span class="mi">1</span><span class="o">..</span><span class="p">];</span>
+
+<span class="w">    </span><span class="k">match</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="sc">b']'</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="fm">panic!</span><span class="p">(</span><span class="s">"loop end should be handled in the caller"</span><span class="p">),</span>
+
+<span class="w">        </span><span class="c1">// Loop: wrap the instructions from the loop body in Loop(...) and forward</span>
+<span class="w">        </span><span class="c1">// the code after the loop end to the caller for further processing</span>
+<span class="w">        </span><span class="sc">b'['</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">parse_loop_body</span><span class="p">(</span><span class="n">remaining_source</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="o">|</span><span class="p">(</span><span class="n">instructions</span><span class="p">,</span><span class="w"> </span><span class="n">source_after_loop</span><span class="p">)</span><span class="o">|</span>
+<span class="w">                     </span><span class="p">(</span><span class="nb">Some</span><span class="p">(</span><span class="n">Loop</span><span class="p">(</span><span class="n">instructions</span><span class="p">)),</span><span class="w"> </span><span class="n">source_after_loop</span><span class="p">)),</span>
+
+<span class="w">        </span><span class="c1">// Everything else is straightforward to parse :-)</span>
+<span class="w">        </span><span class="n">c</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Ok</span><span class="p">((</span><span class="n">parse_simple_instruction</span><span class="p">(</span><span class="n">c</span><span class="p">),</span><span class="w"> </span><span class="n">remaining_source</span><span class="p">))</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=2727e57e-2484-4d1d-8218-1ac9743dda67">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>As you can see in the match arm that parses a loop, the method <code>map(...)</code> can be applied to the <code>Result</code> that is returned by <code>parse_loop_body</code>. This means that the mapping is applied only if the <code>Result</code> contains an <code>Ok</code> value. An <code>Err</code> value is left as it is.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=cc8593cf-bfd8-4c5c-a413-80e149d39aa0">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We can now implement the function which parses a loop body. Since it might have to parse more than one instruction, we process the source code in a loop, and store the instructions that are found in a mutable <code>Vec</code>:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=53dd1a50-1b18-40c1-92ec-77ade42c1c30">
+<div class="input">
+<div class="prompt input_prompt">In [30]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">parse_loop_body</span><span class="p">(</span><span class="n">source</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">])</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="p">(</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">]),</span><span class="w"> </span><span class="n">ParseError</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">result</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Vec</span><span class="p">::</span><span class="n">new</span><span class="p">();</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">remaining</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">source</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="n">remaining</span><span class="p">.</span><span class="n">len</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">remaining</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">b']'</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// We have found the loop end. Return the parsed instructions and the code after ']' to the caller.</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">Ok</span><span class="p">((</span><span class="n">result</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">remaining</span><span class="p">[</span><span class="mi">1</span><span class="o">..</span><span class="p">]));</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// Try to parse the next instruction. Forward any errors to the caller.</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="n">opt_instruction</span><span class="p">,</span><span class="w"> </span><span class="n">source_after_instruction</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parse_next_instruction</span><span class="p">(</span><span class="n">remaining</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">instruction</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">opt_instruction</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// The character was a valid instruction, and not a comment.</span>
+<span class="w">            </span><span class="n">result</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">instruction</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="n">remaining</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">source_after_instruction</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// The expected loop end was not found :-(</span>
+<span class="w">    </span><span class="nb">Err</span><span class="p">(</span><span class="n">ParseError</span><span class="p">::</span><span class="n">MissingLoopEndAtEndOfInput</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=4e41abfe-71f2-4086-970e-257713c272d0">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Before we proceed with parsing an entire Brainfuck program, it would be good if we could test what we have implemented so far. We will set up a function that takes some Brainfuck source code, and prints the first instruction that is parsed by <code>parse_next_instruction</code> (if any) and the remaining source code, or the error that was encountered:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=6f4ba6f3-c0e7-4d77-97e3-dc1418f05107">
+<div class="input">
+<div class="prompt input_prompt">In [31]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">test_parse_next_instruction</span><span class="p">(</span><span class="n">source</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">match</span><span class="w"> </span><span class="n">parse_next_instruction</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nb">Ok</span><span class="p">((</span><span class="n">opt_instruction</span><span class="p">,</span><span class="w"> </span><span class="n">remaining_source</span><span class="p">))</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">"instruction: {:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">opt_instruction</span><span class="p">);</span>
+<span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">"remaining:   {:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="kt">str</span><span class="p">::</span><span class="n">from_utf8</span><span class="p">(</span><span class="n">remaining_source</span><span class="p">).</span><span class="n">unwrap</span><span class="p">());</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="nb">Err</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">"error: {:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">error</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=d195a6e8-0722-4387-8bc3-15506584a127">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>First we will test parsing a simple instruction:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=7855f1ef-6857-45fd-ac66-a22e6774a8ad">
+<div class="input">
+<div class="prompt input_prompt">In [32]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">test_parse_next_instruction</span><span class="p">(</span><span class="s">b"+-&lt;&gt;"</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>instruction: Some(Inc)
+remaining:   "-&lt;&gt;"
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=2b29e85a-38c4-4d45-b207-bf24e7f65b32">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>If the source starts with a comment, <code>parse_simple_instruction</code> returns <code>None</code> and the remainder of the source which still needs to be parsed:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=8fd13929-e30e-4848-9d5d-74caa21800af">
+<div class="input">
+<div class="prompt input_prompt">In [33]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">test_parse_next_instruction</span><span class="p">(</span><span class="s">b"comment ..."</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>instruction: None
+remaining:   "omment ..."
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=2e5afe34-3158-457f-971a-ada2f768e007">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>An unterminated loop will result in an error:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=4f6f300e-799c-4e6f-810c-a128e00207de">
+<div class="input">
+<div class="prompt input_prompt">In [34]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">test_parse_next_instruction</span><span class="p">(</span><span class="s">b"["</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>error: MissingLoopEndAtEndOfInput
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=b77033e7-06f5-4a38-b979-bfee11dc70d5">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>A correct loop is parsed as a single instruction:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=37e45085-d64c-49e3-bec9-febe7b0aa87f">
+<div class="input">
+<div class="prompt input_prompt">In [35]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">test_parse_next_instruction</span><span class="p">(</span><span class="s">b"[-&lt;.]&gt;&gt;&gt;&gt;"</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>instruction: Some(Loop([Dec, Left, Write]))
+remaining:   "&gt;&gt;&gt;&gt;"
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=9b4ab1b9-3176-416b-904c-b5929eb8ef8f">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Nested loops also work just fine:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=50b1a6d6-1a72-4ade-844c-5ef6ef802937">
+<div class="input">
+<div class="prompt input_prompt">In [36]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">test_parse_next_instruction</span><span class="p">(</span><span class="s">b"[+++[&gt;+&lt;-]]"</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>instruction: Some(Loop([Inc, Inc, Inc, Loop([Right, Inc, Left, Dec])]))
+remaining:   ""
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=4fd5b18c-ba2a-4ec2-8525-425210eed6ac">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Finally, we will implement the function <code>parse</code>, which parses a full program:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=c8e26cc5-4675-41a3-90e1-7cd73853ae26">
+<div class="input">
+<div class="prompt input_prompt">In [37]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="k">fn</span><span class="w"> </span><span class="nf">parse</span><span class="p">(</span><span class="n">source</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">])</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="p">(</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="p">),</span><span class="w"> </span><span class="n">ParseError</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">result</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Instruction</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Vec</span><span class="p">::</span><span class="n">new</span><span class="p">();</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">remaining</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">source</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="n">remaining</span><span class="p">.</span><span class="n">len</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">remaining</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">b']'</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Loop ends are only expected in parse_loop_body :-(</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">Err</span><span class="p">(</span><span class="n">ParseError</span><span class="p">::</span><span class="n">UnexpectedLoopEnd</span><span class="p">(</span><span class="n">source</span><span class="p">.</span><span class="n">len</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">remaining</span><span class="p">.</span><span class="n">len</span><span class="p">()));</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// Try to parse the next instruction. Forward any errors to the caller.</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="n">opt_instruction</span><span class="p">,</span><span class="w"> </span><span class="n">source_after_instruction</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parse_next_instruction</span><span class="p">(</span><span class="n">remaining</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">instruction</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">opt_instruction</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// The character was a valid instruction, and not a comment.</span>
+<span class="w">            </span><span class="n">result</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">instruction</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="n">remaining</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">source_after_instruction</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="nb">Ok</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=49b7cde7-836b-43a8-8e0e-96fd9967040a">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>First, we will test if the correct error is returned for some invalid programs:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=f9012b40-2642-4088-97a1-2fa1bc7c1039">
+<div class="input">
+<div class="prompt input_prompt">In [38]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">parse</span><span class="p">(</span><span class="s">b"]"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[38]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>Err(UnexpectedLoopEnd(0))</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=a447cf36-1bb2-41a7-8252-6712e3d9f90e">
+<div class="input">
+<div class="prompt input_prompt">In [39]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">parse</span><span class="p">(</span><span class="s">b"[[[]]]]"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[39]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>Err(UnexpectedLoopEnd(6))</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=f1dbdbc2-7558-4c73-a11e-90906ea82bc0">
+<div class="input">
+<div class="prompt input_prompt">In [40]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">parse</span><span class="p">(</span><span class="s">b"["</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt output_prompt">Out[40]:</div>
+<div class="output_text output_subarea output_execute_result">
+<pre>Err(MissingLoopEndAtEndOfInput)</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=2dbce4d5-7892-4bef-a629-0c4ad2853ee7">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now let us try a valid non-trivial program to see if our parser works as expected.</p>
+<p>The following program reads a byte $n$, and then outputs the first $n$ Fibonacci numbers:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=67dd35ea-adb9-4c07-ad80-31e880248dd2">
+<div class="input">
+<div class="prompt input_prompt">In [41]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">fib</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parse</span><span class="p">(</span><span class="s">b"</span>
+<span class="s">,&gt;&gt;+&lt;&lt;</span>
+<span class="s">[-&gt;</span>
+<span class="s">  [-&gt;&gt;+&lt;&lt;]</span>
+<span class="s">  &gt;</span>
+<span class="s">  [-&lt;+&gt;&gt;+&lt;]</span>
+<span class="s">  &gt;</span>
+<span class="s">  [-&lt;+&gt;]</span>
+<span class="s">  &lt;&lt;.&lt;</span>
+<span class="s">]"</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered" id="cell-id=47a4499a-52e8-49fe-b752-4df3d183ed9a">
+<div class="input">
+<div class="prompt input_prompt">In [42]:</div>
+<div class="inner_cell">
+<div class="input_area">
+<div class="highlight hl-Rust"><pre><span></span><span class="n">execute_with_input</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fib</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">[</span><span class="mi">11</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output as bytes: [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89]
+Output as str:   Ok("\u{1}\u{1}\u{2}\u{3}\u{5}\u{8}\r\u{15}\"7Y")
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=2c293851-03d5-46e3-948a-adce471537e1">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>So everything seems to work fine 🙂</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=c2666446-f78c-4073-a136-c47541fc7f8e">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Maybe you have noticed that the functions <code>parse</code> and <code>parse_loop_body</code> are very similar. They only differences (except for the return type) are:</p>
+<ul>
+<li>what happens if a loop end character <code>]</code> is found (return "unexpected loop end" error or return parsed instructions and the remaining source after the loop),</li>
+<li>what happens if there is no more input to parse (return parsed instructions or return "missing loop end" error).</li>
+</ul>
+<p>Even though we will finally implement a new, much simpler parser with the nom crate, factoring out the common parts into a generic function, and parametrizing it with the desired "loop end" and "input end" behavior is a nice opportunity to learn how to pass functions as arguments in Rust functions.</p>
+<p>This post is already very long though, so we will postpone this.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=dd23c7f5-293d-4c3c-91fb-4eada05fff00">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Summary">Summary<a class="anchor-link" href="#Summary">¶</a>
+</h3>
+<p>We have implemented a parser, which can transform the source code for any Brainfuck program into an abstract syntax tree.
+This abstract syntax tree can then be executed with the engine that we have developed in the previous posts in this series.</p>
+<p>Along the way, we used a few interesting Rust concepts, such as iterators. We have also worked with the generic enum types <code>Option</code> and <code>Result</code> and found concise ways to work with them.</p>
+<p>In the next posts, we will learn how to parse command line arguments and then turn our Brainfuck interpreter into an application that can be run from the command line. Moreover, we will simplify our parser and see that using the right crates makes parsing much easier than writing a parser from scratch.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered" id="cell-id=3a51cc91-34df-4192-b5fb-7d54b2cd7e21">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<hr>
+<ol>
+<li>
+<p><span id="fn:source-code-with-bytes-rather-than-strings">We</span> use byte slices, rather than strings, to represent Brainfuck source code here. This is why the literals are prefixed with <code>b</code>, which makes them <a href="https://doc.rust-lang.org/reference/tokens.html#byte-string-literals">byte string literals</a>. Our parser works by consuming one character at a time, and it is easier to determine the remaining input if the consumed character always has the same size, which is one byte for byte slices. In strings, which are represented as UTF-8 in Rust, a character can correspond to a variable number of bytes.<a href="#fnref:source-code-with-bytes-rather-than-strings">↩</a></p>
+</li>
+<li>
+<p><span id="fn:java-null-optional">In</span> some languages, such as Java, all variables (except primitive types like <code>int</code>) can be <code>null</code>. This is not quite the same as an optional value though, which is why Java 8 introduced the generic type <code>Optional&lt;T&gt;</code>.<a href="#fnref:java-null-optional">↩</a></p>
+</li>
+<li>
+<p><span id="fn:option-map">This</span> function is just used as a simple example for using the <code>?</code> operator with <code>Option</code>. This particular task could be solved more easily with <a href="https://doc.rust-lang.org/std/option/enum.Option.html#method.map">the <code>map</code> method of <code>Option</code></a>.<a href="#fnref:option-map">↩</a></p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+    </div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../../../../categories/rust/" rel="tag">rust</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../../../03/31/brainfuck-interpreter-in-rust-part2/" rel="prev" title="Learn Rust by building a Brainfuck interpreter, part 2: the execution engine">Previous post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+        
+    
+<div id="comment-section"></div>
+
+
+<div id="respond">
+<form id="comment-form" method="post" class="" action="https://staticman-freininghaus.onrender.com/v3/entry/github/freininghaus/freininghaus.github.io/main/comments">
+
+<fieldset id="comments-fieldset">
+<input type="hidden" name="options[origin]" value="posts/2024-05-14-brainfuck-interpreter-in-rust-part3/rust-bf-part-3.ipynb"><input type="hidden" id="comment-replying-to-uid" name="fields[replying-to-id]" value=""><input type="hidden" name="options[title]" value="Learn Rust by building a Brainfuck interpreter, part 3: how you should not build a parser"><div class="form-group mt-4">
+    <label for="comment-form-message"><h3>Add Comment</h3></label>
+    <textarea class="form-control" name="fields[message]" type="text" id="comment-form-message" placeholder="Your comment (markdown accepted)" required rows="6"></textarea>
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-name">Name</label>
+    <input class="form-control" name="fields[author]" type="text" id="comment-form-name" placeholder="Your name (required)" required>
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-email">E-mail</label>
+    <input class="form-control" name="fields[email]" type="email" id="comment-form-email" placeholder="Your email (optional)">
+</div>
+
+  <div class="form-group">
+    <label for="comment-form-email">Website</label>
+    <input class="form-control" name="fields[url]" type="url" id="comment-form-url" placeholder="Link to your website (optional)">
+</div>
+
+  <div class="form-group" style="display:none;">
+    <label for="hp">Hp</label>
+    <input class="form-control" name="fields[hp]" id="hp" type="text" placeholder="Leave blank">
+</div>
+
+
+  <button class="btn btn-primary" id="comment-form-submit">
+    Submit comment
+  </button>
+
+</fieldset>
+</form>
+</div>
+
+<div class="modal" id="comments-modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="comments-modal-title"></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="comments-modal-text"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- script for moving the comment form next to a comment for replies -->
+<script src="../../../../../assets/js/staticman_comments.js"></script><!-- icon for the button while comment submission is in progress --><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><symbol id="icon-loading" viewbox="149.8 37.8 499.818 525"><path d="M557.8 187.8c13.8 0 24.601-10.8 24.601-24.6S571.6 138.6 557.8 138.6s-24.6 10.8-24.6 24.6c0 13.2 10.8 24.6 24.6 24.6zm61.2 90.6c-16.8 0-30.6 13.8-30.6 30.6s13.8 30.6 30.6 30.6 30.6-13.8 30.6-30.6c.6-16.8-13.2-30.6-30.6-30.6zm-61.2 145.2c-20.399 0-36.6 16.2-36.6 36.601 0 20.399 16.2 36.6 36.6 36.6 20.4 0 36.601-16.2 36.601-36.6C595 439.8 578.2 423.6 557.8 423.6zM409 476.4c-24 0-43.2 19.199-43.2 43.199s19.2 43.2 43.2 43.2 43.2-19.2 43.2-43.2S433 476.4 409 476.4zM260.8 411c-27 0-49.2 22.2-49.2 49.2s22.2 49.2 49.2 49.2 49.2-22.2 49.2-49.2-22.2-49.2-49.2-49.2zm-10.2-102c0-27.6-22.8-50.4-50.4-50.4-27.6 0-50.4 22.8-50.4 50.4 0 27.6 22.8 50.4 50.4 50.4 27.6 0 50.4-22.2 50.4-50.4zm10.2-199.8c-30 0-54 24-54 54s24 54 54 54 54-24 54-54-24.6-54-54-54zM409 37.8c-35.4 0-63.6 28.8-63.6 63.6S374.2 165 409 165s63.6-28.8 63.6-63.6-28.2-63.6-63.6-63.6z"></path></symbol></svg></section><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" integrity="sha384-3lJUsx1TJHt7BA4udB5KPnDrlkO8T6J6v/op7ui0BbCjvZ9WqV4Xm6DTP6kQ/iBH" crossorigin="anonymous"></script><script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$latex ','$'], ['\\(','\\)']]}});
+        </script></article><!--End of body content--><footer id="footer">
+            Contents © 2024         <a href="mailto:frank78ac@googlemail.com">Frank Reininghaus</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+            
+        </footer>
+</div>
+</div>
+
+
+            <script src="../../../../../assets/js/jquery.min.js"></script><script src="../../../../../assets/js/popper.min.js"></script><script src="../../../../../assets/js/bootstrap.min.js"></script><script src="../../../../../assets/js/baguetteBox.min.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>
