@@ -230,9 +230,9 @@ A '<code>[</code>' and a '<code>]</code>' instruction match just like parenthese
 <div class="prompt input_prompt">In [2]:</div>
 <div class="inner_cell">
 <div class="input_area">
-<div class="highlight hl-Rust"><pre><span></span><span class="k">struct</span> <span class="nc">ArrayTape</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">data</span>: <span class="p">[</span><span class="kt">u8</span><span class="p">;</span><span class="w"> </span><span class="mi">30000</span><span class="p">],</span>
-<span class="w">    </span><span class="n">pos</span>: <span class="kt">usize</span>
+<div class="highlight hl-Rust"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">ArrayTape</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">data</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="kt">u8</span><span class="p">;</span><span class="w"> </span><span class="mi">30000</span><span class="p">],</span>
+<span class="w">    </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -253,7 +253,7 @@ A '<code>[</code>' and a '<code>]</code>' instruction match just like parenthese
 <div class="prompt input_prompt">In [3]:</div>
 <div class="inner_cell">
 <div class="input_area">
-<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">my_tape</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ArrayTape</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">data</span>: <span class="p">[</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="mi">30000</span><span class="p">],</span><span class="w"> </span><span class="n">pos</span>: <span class="mi">0</span><span class="w"> </span><span class="p">};</span>
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">my_tape</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ArrayTape</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">data</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="mi">30000</span><span class="p">],</span><span class="w"> </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">};</span>
 </pre></div>
 </div>
 </div>
@@ -274,15 +274,15 @@ A '<code>[</code>' and a '<code>]</code>' instruction match just like parenthese
 <div class="inner_cell">
 <div class="input_area">
 <div class="highlight hl-Rust"><pre><span></span><span class="k">impl</span><span class="w"> </span><span class="n">ArrayTape</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">fn</span> <span class="nf">new</span><span class="p">()</span><span class="w"> </span>-&gt; <span class="nc">Self</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">new</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nc">Self</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="bp">Self</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">data</span>: <span class="p">[</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="mi">30000</span><span class="p">],</span>
-<span class="w">            </span><span class="n">pos</span>: <span class="mi">0</span>
+<span class="w">            </span><span class="n">data</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="mi">30000</span><span class="p">],</span>
+<span class="w">            </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 
-<span class="kd">let</span><span class="w"> </span><span class="n">my_tape_2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ArrayTape</span>::<span class="n">new</span><span class="p">();</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">my_tape_2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ArrayTape</span><span class="p">::</span><span class="n">new</span><span class="p">();</span>
 </pre></div>
 </div>
 </div>
@@ -311,16 +311,16 @@ A '<code>[</code>' and a '<code>]</code>' instruction match just like parenthese
 <div class="prompt input_prompt">In [5]:</div>
 <div class="inner_cell">
 <div class="input_area">
-<div class="highlight hl-Rust"><pre><span></span><span class="k">struct</span> <span class="nc">VecTape</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">data</span>: <span class="nb">Vec</span><span class="o">&lt;</span><span class="kt">u8</span><span class="o">&gt;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">pos</span>: <span class="kt">usize</span>
+<div class="highlight hl-Rust"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">VecTape</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">data</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="kt">u8</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span>
 <span class="p">}</span>
 
 <span class="k">impl</span><span class="w"> </span><span class="n">VecTape</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">fn</span> <span class="nf">new</span><span class="p">()</span><span class="w"> </span>-&gt; <span class="nc">Self</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">new</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nc">Self</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="bp">Self</span><span class="p">{</span>
-<span class="w">            </span><span class="n">data</span>: <span class="nc">vec</span><span class="o">!</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-<span class="w">            </span><span class="n">pos</span>: <span class="mi">0</span>
+<span class="w">            </span><span class="n">data</span><span class="p">:</span><span class="w"> </span><span class="nc">vec</span><span class="o">!</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+<span class="w">            </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
@@ -344,19 +344,19 @@ A '<code>[</code>' and a '<code>]</code>' instruction match just like parenthese
 <div class="prompt input_prompt">In [6]:</div>
 <div class="inner_cell">
 <div class="input_area">
-<div class="highlight hl-Rust"><pre><span></span><span class="k">use</span><span class="w"> </span><span class="n">std</span>::<span class="n">collections</span>::<span class="n">VecDeque</span><span class="p">;</span>
+<div class="highlight hl-Rust"><pre><span></span><span class="k">use</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">collections</span><span class="p">::</span><span class="n">VecDeque</span><span class="p">;</span>
 
 <span class="cp">#[derive(Debug)]</span>
-<span class="k">struct</span> <span class="nc">Tape</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">data</span>: <span class="nc">VecDeque</span><span class="o">&lt;</span><span class="kt">u8</span><span class="o">&gt;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">pos</span>: <span class="kt">usize</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">Tape</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">data</span><span class="p">:</span><span class="w"> </span><span class="nc">VecDeque</span><span class="o">&lt;</span><span class="kt">u8</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="kt">usize</span>
 <span class="p">}</span>
 
 <span class="k">impl</span><span class="w"> </span><span class="n">Tape</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">fn</span> <span class="nf">new</span><span class="p">()</span><span class="w"> </span>-&gt; <span class="nc">Self</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">new</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nc">Self</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="bp">Self</span><span class="p">{</span>
-<span class="w">            </span><span class="n">data</span>: <span class="nc">VecDeque</span>::<span class="n">from</span><span class="p">([</span><span class="mi">0</span><span class="p">]),</span>
-<span class="w">            </span><span class="n">pos</span>: <span class="mi">0</span>
+<span class="w">            </span><span class="n">data</span><span class="p">:</span><span class="w"> </span><span class="nc">VecDeque</span><span class="p">::</span><span class="n">from</span><span class="p">([</span><span class="mi">0</span><span class="p">]),</span>
+<span class="w">            </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
@@ -380,11 +380,11 @@ A '<code>[</code>' and a '<code>]</code>' instruction match just like parenthese
 <div class="inner_cell">
 <div class="input_area">
 <div class="highlight hl-Rust"><pre><span></span><span class="k">impl</span><span class="w"> </span><span class="n">Tape</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">fn</span> <span class="nf">get</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="kt">u8</span> <span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kt">u8</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="bp">self</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="p">.</span><span class="n">pos</span><span class="p">]</span>
 <span class="w">    </span><span class="p">}</span>
 
-<span class="w">    </span><span class="k">fn</span> <span class="nf">set</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">value</span>: <span class="kt">u8</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">set</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="kt">u8</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="bp">self</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="p">.</span><span class="n">pos</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
@@ -407,7 +407,7 @@ A '<code>[</code>' and a '<code>]</code>' instruction match just like parenthese
 <div class="prompt input_prompt">In [8]:</div>
 <div class="inner_cell">
 <div class="input_area">
-<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span>::<span class="n">new</span><span class="p">();</span>
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span><span class="p">::</span><span class="n">new</span><span class="p">();</span>
 <span class="n">t1</span><span class="p">.</span><span class="n">get</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -460,7 +460,7 @@ A '<code>[</code>' and a '<code>]</code>' instruction match just like parenthese
 <div class="prompt input_prompt">In [10]:</div>
 <div class="inner_cell">
 <div class="input_area">
-<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span>::<span class="n">new</span><span class="p">();</span>
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span><span class="p">::</span><span class="n">new</span><span class="p">();</span>
 <span class="fm">assert_eq!</span><span class="p">(</span><span class="n">t2</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
 <span class="n">t2</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="mi">17</span><span class="p">);</span>
 <span class="fm">assert_eq!</span><span class="p">(</span><span class="n">t2</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span><span class="w"> </span><span class="mi">17</span><span class="p">);</span>
@@ -529,7 +529,7 @@ note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose bac
 <div class="inner_cell">
 <div class="input_area">
 <div class="highlight hl-Rust"><pre><span></span><span class="k">impl</span><span class="w"> </span><span class="n">Tape</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">fn</span> <span class="nf">right</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">right</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="bp">self</span><span class="p">.</span><span class="n">pos</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
 <span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">pos</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">len</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">            </span><span class="c1">// The data pointer is moving off the tape:</span>
@@ -538,7 +538,7 @@ note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose bac
 <span class="w">        </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">    </span>
-<span class="w">    </span><span class="k">fn</span> <span class="nf">left</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">left</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">pos</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
 <span class="w">            </span><span class="c1">// We have not reached the leftmost cell yet.</span>
 <span class="w">            </span><span class="c1">// Just move the data pointer to the left.</span>
@@ -569,7 +569,7 @@ note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose bac
 <div class="prompt input_prompt">In [13]:</div>
 <div class="inner_cell">
 <div class="input_area">
-<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span>::<span class="n">new</span><span class="p">();</span>
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">t3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Tape</span><span class="p">::</span><span class="n">new</span><span class="p">();</span>
 
 <span class="n">t3</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
 <span class="n">t3</span><span class="p">.</span><span class="n">right</span><span class="p">();</span>
@@ -611,7 +611,7 @@ note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose bac
 <div class="prompt input_prompt">In [14]:</div>
 <div class="inner_cell">
 <div class="input_area">
-<div class="highlight hl-Rust"><pre><span></span><span class="k">enum</span> <span class="nc">InstructionFirstTry</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight hl-Rust"><pre><span></span><span class="k">enum</span><span class="w"> </span><span class="nc">InstructionFirstTry</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">Inc</span><span class="p">,</span>
 <span class="w">    </span><span class="n">Dec</span><span class="p">,</span>
 <span class="w">    </span><span class="n">Left</span><span class="p">,</span>
@@ -654,7 +654,7 @@ note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose bac
 <div class="inner_cell">
 <div class="input_area">
 <div class="highlight hl-Rust"><pre><span></span><span class="cp">#[derive(Debug)]</span>
-<span class="k">enum</span> <span class="nc">Instruction</span><span class="w"> </span><span class="p">{</span>
+<span class="k">enum</span><span class="w"> </span><span class="nc">Instruction</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">Inc</span><span class="p">,</span>
 <span class="w">    </span><span class="n">Dec</span><span class="p">,</span>
 <span class="w">    </span><span class="n">Left</span><span class="p">,</span>
@@ -691,7 +691,7 @@ note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose bac
 <div class="prompt input_prompt">In [16]:</div>
 <div class="inner_cell">
 <div class="input_area">
-<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">myInstruction</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Instruction</span>::<span class="n">Inc</span><span class="p">;</span>
+<div class="highlight hl-Rust"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="n">myInstruction</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Instruction</span><span class="p">::</span><span class="n">Inc</span><span class="p">;</span>
 </pre></div>
 </div>
 </div>
@@ -711,7 +711,7 @@ note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose bac
 <div class="prompt input_prompt">In [17]:</div>
 <div class="inner_cell">
 <div class="input_area">
-<div class="highlight hl-Rust"><pre><span></span><span class="k">use</span><span class="w"> </span><span class="n">Instruction</span>::<span class="o">*</span><span class="p">;</span>
+<div class="highlight hl-Rust"><pre><span></span><span class="k">use</span><span class="w"> </span><span class="n">Instruction</span><span class="p">::</span><span class="o">*</span><span class="p">;</span>
 </pre></div>
 </div>
 </div>
